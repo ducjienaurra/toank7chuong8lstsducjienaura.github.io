@@ -3,810 +3,694 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Geometry Survival - Escape the Maze</title>
+    <title>Escape The Geometry Maze - Among Us Style</title>
     <style>
         body, html {
-            margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #000; color: #fff;
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            overflow: hidden; background-color: #000;
+            font-family: Arial, sans-serif; user-select: none;
         }
         canvas { display: block; }
         
-        /* UI Overlays */
-        #ui-layer {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;
-        }
-        .hud-text {
-            position: absolute; padding: 15px 25px; background: rgba(0,0,0,0.6);
-            border-radius: 8px; font-size: 20px; font-weight: bold; pointer-events: none;
-            border: 2px solid #fff;
-        }
-        #stats-hud { top: 20px; right: 20px; text-align: right; }
-        #timer-hud { top: 20px; left: 20px; }
-        #hp-hud { bottom: 20px; left: 20px; color: #ff4d4d; }
-        #interaction-hud {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50px);
-            font-size: 24px; font-weight: bold; color: yellow; text-shadow: 2px 2px 0 #000;
-            display: none; pointer-events: none;
-        }
-
-        /* Modals */
-        .modal-container {
+        /* Giao diện UI */
+        #uiLayer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); display: flex; justify-content: center;
-            align-items: center; pointer-events: auto; z-index: 10;
+            pointer-events: none;
         }
-        .modal-box {
-            background: #222; padding: 30px; border-radius: 12px; width: 600px;
-            max-width: 90%; border: 3px solid #555; text-align: center;
-            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+        #hud, #timerDisplay {
+            position: absolute; top: 15px; color: white;
+            font-size: 24px; font-weight: bold;
+            text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
         }
-        .modal-box h1 { margin-top: 0; color: #ffeb3b; }
-        .modal-box p { font-size: 18px; line-height: 1.6; text-align: left;}
-        button {
-            background: #4CAF50; color: white; border: none; padding: 12px 24px;
-            font-size: 18px; border-radius: 6px; cursor: pointer; font-weight: bold;
-            margin-top: 20px; transition: 0.2s;
-        }
-        button:hover { background: #45a049; transform: scale(1.05); }
+        #hud { right: 25px; text-align: right; }
+        #timerDisplay { left: 25px; }
         
-        /* Question UI */
-        #question-text { font-size: 22px; font-weight: bold; margin-bottom: 20px; color: #fff; }
-        .answer-btn {
-            display: block; width: 100%; margin: 10px 0; padding: 15px;
-            background: #333; border: 2px solid #666; font-size: 18px;
-            text-align: left; transition: 0.2s;
+        /* Màn hình thông báo */
+        .screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); display: flex;
+            flex-direction: column; justify-content: center; align-items: center;
+            pointer-events: auto; color: white; z-index: 100;
         }
-        .answer-btn:hover { background: #555; border-color: #ffeb3b; }
-
-        .hidden { display: none !important; }
+        .board {
+            background: #222; padding: 30px; border: 4px solid #fff;
+            border-radius: 10px; max-width: 750px; text-align: center;
+            box-shadow: 0 0 25px rgba(0,255,0,0.4);
+        }
+        .board h1 { margin-top: 0; color: #ffeb3b; letter-spacing: 2px; }
+        .board p { font-size: 17px; line-height: 1.6; text-align: left; }
+        button {
+            padding: 12px 35px; font-size: 20px; font-weight: bold;
+            background-color: #4CAF50; color: white; border: 2px solid #fff;
+            border-radius: 5px; cursor: pointer; margin-top: 20px; transition: 0.2s;
+        }
+        button:hover { background-color: #45a049; transform: scale(1.05); }
+        
+        /* Màn hình trả lời câu hỏi */
+        #quizScreen { display: none; background: rgba(0,0,0,0.9); }
+        .quiz-container {
+            background: white; color: black; padding: 30px; border-radius: 10px;
+            width: 650px; text-align: center; pointer-events: auto;
+            box-shadow: 0 0 20px rgba(255,255,255,0.2);
+        }
+        .quiz-container h2 { margin-top: 0; color: #333; }
+        #questionText { font-size: 20px; margin-bottom: 25px; font-weight: bold; line-height: 1.4;}
+        .options { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .option-btn {
+            background: #2196F3; color: white; padding: 15px; font-size: 18px;
+            border: none; border-radius: 5px; cursor: pointer; transition: 0.2s;
+            font-weight: bold;
+        }
+        .option-btn:hover { background: #1976D2; }
+        
+        /* Hiệu ứng trúng đạn */
+        #damageOverlay {
+            position: absolute; top:0; left:0; width:100%; height:100%;
+            background: red; opacity: 0; pointer-events: none; transition: opacity 0.15s;
+        }
     </style>
 </head>
 <body>
-
     <canvas id="gameCanvas"></canvas>
-
-    <!-- In-Game HUD -->
-    <div id="ui-layer" class="hidden">
-        <div id="timer-hud" class="hud-text">Thời gian: <span id="timer-val">00:00</span></div>
-        <div id="stats-hud" class="hud-text">Máy phát điện: <span id="gen-val">0/30</span><br><span style="font-size:16px;color:#aaa;">(Cần 15 để mở cửa)</span></div>
-        <div id="hp-hud" class="hud-text">Máu (HP): <span id="hp-val">5/5</span></div>
-        <div id="interaction-hud">Bấm phím 'E' để sửa chữa</div>
+    
+    <div id="uiLayer">
+        <div id="timerDisplay">Thời gian: 00:00</div>
+        <div id="hud">Máy phát điện: <span id="genCount">0</span>/10<br>HP: <span id="hpCount">5</span>/5</div>
+        <div id="damageOverlay"></div>
     </div>
 
-    <!-- Start Screen -->
-    <div id="start-screen" class="modal-container">
-        <div class="modal-box">
-            <h1>GEOMETRY SURVIVAL</h1>
-            <p><strong>Chào mừng Thiện!</strong> Hãy thoát khỏi khu mê cung khổng lồ này.</p>
-            <hr style="border-color:#444">
-            <p><strong>Nhiệm vụ:</strong> Đi tìm và sửa chữa ít nhất 15/30 Máy phát điện được rải rác khắp các căn phòng. Khi hoàn thành, một cánh cửa thoát hiểm sẽ xuất hiện ở xa, hãy đi theo mũi tên để thoát.</p>
-            <p><strong>Kẻ thù:</strong> Có một con quái vật luôn truy lùng bạn bằng con đường ngắn nhất. Nó bắn đạn liên tục. Nếu trúng 5 viên đạn, bạn sẽ thua.</p>
-            <p><strong>Quy luật sửa chữa:</strong> Bạn phải trả lời đúng một câu hỏi Hình học lớp 7 (chủ đề Tam giác). Nếu trả lời sai, bạn sẽ bị Stun (đứng hình) ngẫu nhiên từ 1 đến 5 giây!</p>
-            <p><strong>Điều khiển:</strong><br> - Dùng <b>W A S D</b> để di chuyển.<br> - Lại gần máy phát điện và bấm <b>E</b> để tương tác.</p>
+    <div id="startScreen" class="screen">
+        <div class="board">
+            <h1>ESCAPE THE FACILITY</h1>
+            <p>
+                - <b>Bản đồ:</b> Các căn phòng kín đáo được nối kết qua những hệ thống hành lang đan xen lớn nhỏ.<br>
+                - <b>Nhiệm vụ:</b> Khám phá trạm, tìm các phòng chứa máy phát điện (Bấm <b>E</b> để sửa).<br>
+                - <b>Kiến thức:</b> Toán Hình học lớp 7. Trả lời SAI sẽ bị <b>choáng (stun) ngẫu nhiên 1-5 giây</b>.<br>
+                - <b>Mục tiêu:</b> Sửa <b>10/30</b> máy, cửa thoát hiểm màu vàng sẽ mở ra.<br>
+                - <b>Nguy hiểm:</b> Một thực thể luôn săn lùng bạn. Hãy lợi dụng các hành lang lớn để né đạn của nó. Trúng 5 viên = CHẾT.<br>
+                - <b>Điều khiển:</b> W, A, S, D để di chuyển.
+            </p>
             <button onclick="startGame()">BẮT ĐẦU CHƠI</button>
         </div>
     </div>
 
-    <!-- Question Modal -->
-    <div id="question-screen" class="modal-container hidden">
-        <div class="modal-box">
-            <h2 style="color: #4da6ff;">SỬA CHỮA MÁY PHÁT ĐIỆN</h2>
-            <div id="question-text">Câu hỏi hiển thị ở đây?</div>
-            <div id="answers-container"></div>
+    <div id="quizScreen" class="screen">
+        <div class="quiz-container">
+            <h2>HỆ THỐNG SỬA CHỮA</h2>
+            <div id="questionText">Câu hỏi...</div>
+            <div class="options" id="optionsContainer"></div>
         </div>
     </div>
 
-    <!-- End Screen -->
-    <div id="end-screen" class="modal-container hidden">
-        <div class="modal-box">
-            <h1 id="end-title">Game Over</h1>
-            <p id="end-desc">Bạn đã bị quái vật tiêu diệt.</p>
-            <p>Thời gian chơi của bạn: <strong id="end-time" style="color:#ffeb3b">00:00</strong></p>
+    <div id="endScreen" class="screen" style="display: none;">
+        <div class="board">
+            <h1 id="endTitle">KẾT THÚC</h1>
+            <p id="endMessage" style="text-align: center; font-size: 20px;"></p>
             <button onclick="location.reload()">CHƠI LẠI</button>
         </div>
     </div>
 
 <script>
-/** 
- * TẬP HỢP CÂU HỎI HÌNH HỌC LỚP 7 (CHỦ ĐỀ TAM GIÁC) 
+/** * ==========================================
+ * 1. CẤU HÌNH CƠ BẢN
+ * ==========================================
  */
-const QUESTIONS = [
-    { q: "Tổng ba góc của một tam giác bằng bao nhiêu?", options: ["90°", "180°", "270°", "360°"], ans: 1 },
-    { q: "Tam giác có hai cạnh bằng nhau được gọi là gì?", options: ["Tam giác vuông", "Tam giác nhọn", "Tam giác cân", "Tam giác đều"], ans: 2 },
-    { q: "Tam giác có ba cạnh bằng nhau thì mỗi góc bằng bao nhiêu độ?", options: ["45°", "60°", "90°", "120°"], ans: 1 },
-    { q: "Trong một tam giác vuông, cạnh đối diện với góc vuông gọi là gì?", options: ["Cạnh kề", "Cạnh góc vuông", "Cạnh huyền", "Đường cao"], ans: 2 },
-    { q: "Nếu hai tam giác có ba cạnh tương ứng bằng nhau thì chúng bằng nhau theo trường hợp nào?", options: ["Cạnh - Góc - Cạnh (c.g.c)", "Góc - Cạnh - Góc (g.c.g)", "Cạnh - Cạnh - Cạnh (c.c.c)", "Cạnh huyền - góc nhọn"], ans: 2 },
-    { q: "Đường thẳng vuông góc với một đoạn thẳng tại trung điểm của nó gọi là gì?", options: ["Đường cao", "Đường trung tuyến", "Đường trung trực", "Đường phân giác"], ans: 2 },
-    { q: "Ba đường trung trực của một tam giác cùng đi qua một điểm. Điểm đó có tính chất gì?", options: ["Cách đều ba đỉnh của tam giác", "Cách đều ba cạnh của tam giác", "Chia mỗi trung tuyến thành tỷ lệ 2:1", "Nằm ngoài tam giác"], ans: 0 },
-    { q: "Ba đường trung tuyến của tam giác cắt nhau tại một điểm gọi là gì?", options: ["Trực tâm", "Trọng tâm", "Tâm đường tròn ngoại tiếp", "Tâm đường tròn nội tiếp"], ans: 1 },
-    { q: "Giao điểm của ba đường cao trong một tam giác được gọi là gì?", options: ["Trọng tâm", "Trực tâm", "Tâm đường tròn", "Trung điểm"], ans: 1 },
-    { q: "Ba đường phân giác của một tam giác cùng đi qua một điểm. Điểm đó có tính chất gì?", options: ["Cách đều ba đỉnh", "Là trọng tâm tam giác", "Cách đều ba cạnh của tam giác", "Luôn nằm trên cạnh dài nhất"], ans: 2 },
-    { q: "Trong tam giác vuông cân, hai góc nhọn có số đo bằng bao nhiêu?", options: ["30°", "45°", "60°", "90°"], ans: 1 },
-    { q: "Trong một tam giác, đoạn thẳng nối từ đỉnh đến trung điểm cạnh đối diện gọi là:", options: ["Đường cao", "Đường trung trực", "Đường phân giác", "Đường trung tuyến"], ans: 3 },
-    { q: "Theo bất đẳng thức tam giác, tổng độ dài hai cạnh bất kỳ luôn như thế nào so với cạnh còn lại?", options: ["Nhỏ hơn", "Bằng", "Lớn hơn", "Lớn hơn hoặc bằng"], ans: 2 },
-    { q: "Trong một tam giác, góc đối diện với cạnh lớn hơn thì góc đó:", options: ["Nhỏ hơn", "Lớn hơn", "Bằng nhau", "Không xác định được"], ans: 1 },
-    { q: "Cho điểm A nằm ngoài đường thẳng d. Đoạn thẳng ngắn nhất kẻ từ A đến d là:", options: ["Đường xiên", "Đường vuông góc", "Đường chéo", "Đường trung bình"], ans: 1 }
-];
+const TILE_SIZE = 60; 
+const GRID_SIZE = 75; // Map siêu lớn để đảm bảo độ giãn cách phòng và đường đi
+const WIN_CONDITION = 10; // Điều kiện thắng: Sửa 10 máy
 
-/** GAME CONSTANTS & SETTINGS */
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+const WALL = 0;
+const CORRIDOR = 1;
+const ROOM = 2;
+const STRICT_WALL = 3; // Lớp bảo vệ phòng không cho thuật toán đào xuyên
+const DOOR = 4;
 
-const TILE_SIZE = 80;
-const MAP_COLS = 80;
-const MAP_ROWS = 80;
-const MAP_W = MAP_COLS * TILE_SIZE;
-const MAP_H = MAP_ROWS * TILE_SIZE;
+const COLOR_WALL = "#006400";
+const COLOR_CORRIDOR = "#90EE90";
+const COLOR_ROOM = "#FFDAB9";
+const COLOR_GEN_NORMAL = "#ADD8E6";
+const COLOR_GEN_FIXED = "#FFFFE0";
+const COLOR_MONSTER = "#FF0000";
+const COLOR_BULLET = "#000000";
+const COLOR_PLAYER = "#FFFF00";
+const COLOR_PLAYER_STUN = "#FFC0CB";
 
-// Colors
-const COLOR_WALL = '#133e13'; // Xanh lá đậm
-const COLOR_CORRIDOR = '#90ee90'; // Xanh lá nhạt
-const COLOR_ROOM = '#f5deb3'; // Da nhạt
-const COLOR_GEN_NORMAL = '#add8e6'; // Xanh dương nhạt
-const COLOR_GEN_FIXED = '#ffffe0'; // Vàng nhạt
-
-// Entities Rules
-const PLAYER_SPEED = 240;
-const MONSTER_SPEED = PLAYER_SPEED * (2 / 3);
-const BULLET_SPEED = PLAYER_SPEED * 2;
-const MAX_HP = 5;
-const TARGET_GENS = 15;
-const TOTAL_GENS = 30;
-
-// Game State
-let gameState = 'START'; // START, PLAYING, QUESTION, GAMEOVER, WIN
-let mapGrid = []; // 0: Wall, 1: Room, 2: Corridor, 3: Door
-let roomsList = [];
+let map = [];
+let rooms = [];
 let generators = [];
-let bullets = [];
-let flowField = [];
+let exitDoor = null;
+let distanceField = []; 
 
 let player = {
-    x: 0, y: 0, w: 30, h: 30,
-    vx: 0, vy: 0, angle: 0,
-    hp: MAX_HP,
-    stunTimer: 0,
-    color: '#00ccff', stunColor: '#ff66b2', // Hồng
-    fixedGens: 0
+    x: 0, y: 0, radius: 15, speed: 180,
+    vx: 0, vy: 0, angle: 0, hp: 5,
+    stunUntil: 0, fixedCount: 0
 };
 
 let monster = {
-    x: 0, y: 0, w: 40, h: 40,
-    color: '#ff0000', // Vuông đỏ
-    lastShotTimer: 0
+    x: 0, y: 0, speed: 120, lastShootTime: 0
 };
 
-let exitDoor = null;
-let doorIsOpen = false;
-
-// Input tracking
-const keys = { w: false, a: false, s: false, d: false };
-let interactionTarget = null; // Gen gần nhất
-
-// Time Tracking
+let bullets = [];
+let keys = { w:false, a:false, s:false, d:false, e:false };
+let currentGen = null; 
+let gameState = 'START'; 
 let startTime = 0;
-let playTime = 0; // seconds
-let lastTime = 0;
-let pathUpdateTimer = 0;
+let endTime = 0;
 
-// DOM Elements
-const uiLayer = document.getElementById('ui-layer');
-const hpVal = document.getElementById('hp-val');
-const genVal = document.getElementById('gen-val');
-const timerVal = document.getElementById('timer-val');
-const interactionHud = document.getElementById('interaction-hud');
-const qScreen = document.getElementById('question-screen');
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
 
-/** RESIZE CANVAS */
-function resize() {
+window.addEventListener("resize", () => {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-}
-window.addEventListener('resize', resize);
-resize();
+});
+window.dispatchEvent(new Event('resize'));
 
-/** MAP GENERATION (BSP/Random Walk Room Placement) */
-function initMap() {
-    // 1. Fill with walls
-    for (let r = 0; r < MAP_ROWS; r++) {
-        mapGrid[r] = [];
-        flowField[r] = [];
-        for (let c = 0; c < MAP_COLS; c++) {
-            mapGrid[r][c] = 0;
-            flowField[r][c] = 9999;
-        }
+window.addEventListener("keydown", e => { if(keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = true; });
+window.addEventListener("keyup", e => { if(keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = false; });
+
+/**
+ * ==========================================
+ * 2. HỆ THỐNG MAP (PHÒNG KHÉP KÍN + HÀNH LANG ĐA KÍCH THƯỚC)
+ * ==========================================
+ */
+function generateMap() {
+    // 2.1. Đổ mảng toàn Tường
+    for (let y = 0; y < GRID_SIZE; y++) {
+        map[y] = [];
+        for (let x = 0; x < GRID_SIZE; x++) map[y][x] = WALL;
     }
 
-    // 2. Generate random rooms
-    const numRoomsToTry = 150;
-    for (let i = 0; i < numRoomsToTry; i++) {
-        let rw = Math.floor(Math.random() * 6) + 5; // 5 to 10
-        let rh = Math.floor(Math.random() * 6) + 5;
-        let rx = Math.floor(Math.random() * (MAP_COLS - rw - 2)) + 1;
-        let ry = Math.floor(Math.random() * (MAP_ROWS - rh - 2)) + 1;
+    // 2.2. Xây ngẫu nhiên các căn phòng khép kín
+    let attempts = 0;
+    rooms = [];
+    while(rooms.length < 35 && attempts < 2500) {
+        attempts++;
+        let w = Math.floor(Math.random() * 4) + 4; // Kích thước 4x4 đến 7x7 blocks
+        let h = Math.floor(Math.random() * 4) + 4;
+        let x = Math.floor(Math.random() * (GRID_SIZE - w - 8)) + 4;
+        let y = Math.floor(Math.random() * (GRID_SIZE - h - 8)) + 4;
 
-        // Check overlap
-        let overlap = false;
-        for (let r = ry - 1; r <= ry + rh; r++) {
-            for (let c = rx - 1; c <= rx + rw; c++) {
-                if (mapGrid[r][c] !== 0) overlap = true;
+        // Vùng an toàn (Padding) 3 ô xung quanh để nhường chỗ cho hành lang lớn
+        let canPlace = true;
+        for(let ry = y - 3; ry <= y + h + 2; ry++) {
+            for(let rx = x - 3; rx <= x + w + 2; rx++) {
+                if(map[ry][rx] !== WALL) canPlace = false;
             }
         }
 
-        if (!overlap) {
-            roomsList.push({ x: rx, y: ry, w: rw, h: rh });
-            for (let r = ry; r < ry + rh; r++) {
-                for (let c = rx; c < rx + rw; c++) {
-                    mapGrid[r][c] = 1; // Room
+        if (canPlace) {
+            // Lát sàn phòng
+            for(let ry = y; ry < y + h; ry++) {
+                for(let rx = x; rx < x + w; rx++) map[ry][rx] = ROOM;
+            }
+            // Tạo tường cứng STRICT_WALL bao quanh
+            for(let rx = x-1; rx <= x+w; rx++) { map[y-1][rx] = STRICT_WALL; map[y+h][rx] = STRICT_WALL; }
+            for(let ry = y-1; ry <= y+h; ry++) { map[ry][x-1] = STRICT_WALL; map[ry][x+w] = STRICT_WALL; }
+
+            // Đục duy nhất 1 lỗ làm Cửa
+            let doorSide = Math.floor(Math.random() * 4); // 0:Top, 1:Bottom, 2:Left, 3:Right
+            let dx, dy, outX, outY, wallDir;
+            
+            if (doorSide === 0) { dx = x + Math.floor(w/2); dy = y - 1; outX = dx; outY = dy - 1; wallDir = "TOP"; }
+            else if (doorSide === 1) { dx = x + Math.floor(w/2); dy = y + h; outX = dx; outY = dy + 1; wallDir = "BOTTOM"; }
+            else if (doorSide === 2) { dx = x - 1; dy = y + Math.floor(h/2); outX = dx - 1; outY = dy; wallDir = "LEFT"; }
+            else { dx = x + w; dy = y + Math.floor(h/2); outX = dx + 1; outY = dy; wallDir = "RIGHT"; }
+            
+            map[dy][dx] = DOOR; 
+            rooms.push({x, y, w, h, dx, dy, outX, outY, wallDir});
+        }
+    }
+
+    // 2.3. Sử dụng A* để vẽ hành lang nối các cửa với độ rộng đan xen
+    if (rooms.length > 0) {
+        let connected = [rooms[0]];
+        let unconnected = rooms.slice(1);
+
+        while (unconnected.length > 0) {
+            let start = unconnected[0];
+            connected.sort((a,b) => Math.hypot(a.outX - start.outX, a.outY - start.outY) - Math.hypot(b.outX - start.outX, b.outY - start.outY));
+            let target = connected[0];
+
+            let path = findAStarPath(start.outX, start.outY, target.outX, target.outY);
+            if (path) {
+                // Xác định kích thước của đoạn hành lang này (0 = hẹp, 1 = vừa, 2 = lớn)
+                let corridorStyle = Math.floor(Math.random() * 3); 
+
+                path.forEach(p => {
+                    let minX = p.x, maxX = p.x, minY = p.y, maxY = p.y;
+                    if(corridorStyle === 1) { maxX += 1; maxY += 1; } // 2x2
+                    if(corridorStyle === 2) { minX -= 1; maxX += 1; minY -= 1; maxY += 1; } // 3x3
+
+                    for(let ey = minY; ey <= maxY; ey++) {
+                        for(let ex = minX; ex <= maxX; ex++) {
+                            if(ex > 0 && ex < GRID_SIZE-1 && ey > 0 && ey < GRID_SIZE-1) {
+                                // Chỉ đào hành lang đè lên WALL, giữ nguyên cấu trúc STRICT_WALL của phòng
+                                if(map[ey][ex] === WALL) {
+                                    map[ey][ex] = CORRIDOR;
+                                }
+                            }
+                        }
+                    }
+                });
+                connected.push(start);
+                unconnected.shift();
+            } else {
+                unconnected.shift(); // Bỏ qua nếu hoàn toàn không thể nối
+            }
+        }
+    }
+
+    // 2.4. Dọn dẹp map (Trả Cửa và Tường về định dạng chuẩn)
+    for(let y=0; y<GRID_SIZE; y++){
+        for(let x=0; x<GRID_SIZE; x++){
+            if(map[y][x] === DOOR) map[y][x] = CORRIDOR;
+            if(map[y][x] === STRICT_WALL) map[y][x] = WALL;
+        }
+    }
+
+    // 2.5. Đặt Máy phát điện
+    generators = [];
+    for(let i=0; i<Math.min(30, rooms.length); i++){
+        let r = rooms[i];
+        let gx, gy, gRot;
+        
+        // Đặt sát tường đối diện cửa nhìn ra ngoài
+        if (r.wallDir === "TOP") { gx = r.x + r.w/2; gy = r.y + r.h - 0.5; gRot = Math.PI; } 
+        else if (r.wallDir === "BOTTOM") { gx = r.x + r.w/2; gy = r.y - 0.5 + 1; gRot = 0; } 
+        else if (r.wallDir === "LEFT") { gx = r.x + r.w - 0.5; gy = r.y + r.h/2; gRot = -Math.PI/2; } 
+        else { gx = r.x - 0.5 + 1; gy = r.y + r.h/2; gRot = Math.PI/2; }
+
+        generators.push({
+            id: i, x: gx * TILE_SIZE, y: gy * TILE_SIZE, rot: gRot, fixed: false
+        });
+    }
+
+    // Vị trí Spawn
+    let pRoom = rooms[rooms.length - 1];
+    player.x = (pRoom.x + pRoom.w/2) * TILE_SIZE;
+    player.y = (pRoom.y + pRoom.h/2) * TILE_SIZE;
+
+    let mRoom = rooms[0];
+    monster.x = (mRoom.x + mRoom.w/2) * TILE_SIZE;
+    monster.y = (mRoom.y + mRoom.h/2) * TILE_SIZE;
+}
+
+function findAStarPath(sx, sy, tx, ty) {
+    let openSet = [{x: sx, y: sy, g: 0, f: 0, parent: null}];
+    let closedSet = new Set();
+    let hash = (x,y) => x + y * GRID_SIZE;
+
+    while(openSet.length > 0) {
+        openSet.sort((a,b) => a.f - b.f);
+        let curr = openSet.shift();
+        
+        if (curr.x === tx && curr.y === ty) {
+            let path = []; let p = curr;
+            while(p) { path.push({x: p.x, y: p.y}); p = p.parent; }
+            return path;
+        }
+        closedSet.add(hash(curr.x, curr.y));
+
+        let dirs = [[0,-1],[1,0],[0,1],[-1,0]];
+        for(let d of dirs) {
+            let nx = curr.x + d[0]; let ny = curr.y + d[1];
+            if (nx < 1 || nx >= GRID_SIZE-1 || ny < 1 || ny >= GRID_SIZE-1) continue;
+            
+            // AI tuyệt đối không đi xuyên phòng hoặc tường bảo vệ
+            if (map[ny][nx] === ROOM || map[ny][nx] === STRICT_WALL) continue;
+            
+            let cost = (map[ny][nx] === CORRIDOR || map[ny][nx] === DOOR) ? 1 : 5;
+            let g = curr.g + cost;
+            let h = Math.abs(nx - tx) + Math.abs(ny - ty); 
+            let f = g + h;
+
+            if (closedSet.has(hash(nx,ny))) continue;
+            
+            let existing = openSet.find(o => o.x === nx && o.y === ny);
+            if (existing) {
+                if (g < existing.g) { existing.g = g; existing.f = f; existing.parent = curr; }
+            } else {
+                openSet.push({x: nx, y: ny, g: g, f: f, parent: curr});
+            }
+        }
+    }
+    return null;
+}
+
+/**
+ * ==========================================
+ * 3. AI TÌM ĐƯỜNG QUÁI VẬT & NGÂN HÀNG CÂU HỎI
+ * ==========================================
+ */
+function updateDistanceField() {
+    for (let y = 0; y < GRID_SIZE; y++) {
+        distanceField[y] = [];
+        for (let x = 0; x < GRID_SIZE; x++) distanceField[y][x] = 999999;
+    }
+    let px = Math.floor(player.x / TILE_SIZE); let py = Math.floor(player.y / TILE_SIZE);
+    
+    if (px<0||px>=GRID_SIZE||py<0||py>=GRID_SIZE || map[py][px] === WALL) return;
+
+    let queue = [{x: px, y: py}]; distanceField[py][px] = 0;
+    let dVec = [ {x:0,y:-1}, {x:1,y:0}, {x:0,y:1}, {x:-1,y:0}, {x:1,y:-1}, {x:1,y:1}, {x:-1,y:1}, {x:-1,y:-1} ];
+
+    while(queue.length > 0) {
+        let curr = queue.shift();
+        let cd = distanceField[curr.y][curr.x];
+
+        for(let d of dVec) {
+            let nx = curr.x + d.x; let ny = curr.y + d.y;
+            if (nx >= 0 && nx < GRID_SIZE && ny >= 0 && ny < GRID_SIZE && map[ny][nx] !== WALL) {
+                if(d.x !== 0 && d.y !== 0) { if (map[curr.y][nx] === WALL || map[ny][curr.x] === WALL) continue; }
+                let distInc = (d.x !== 0 && d.y !== 0) ? 1.414 : 1;
+                if (distanceField[ny][nx] > cd + distInc) {
+                    distanceField[ny][nx] = cd + distInc; queue.push({x: nx, y: ny});
                 }
             }
         }
     }
+}
 
-    // 3. Connect rooms with corridors
-    for (let i = 1; i < roomsList.length; i++) {
-        let r1 = roomsList[i - 1];
-        let r2 = roomsList[i];
-        let c1 = { x: Math.floor(r1.x + r1.w / 2), y: Math.floor(r1.y + r1.h / 2) };
-        let c2 = { x: Math.floor(r2.x + r2.w / 2), y: Math.floor(r2.y + r2.h / 2) };
-        carveCorridor(c1.x, c1.y, c2.x, c2.y);
+function generateQuestion() {
+    let type = Math.floor(Math.random() * 8);
+    let q = ""; let options = []; let correct = 0;
+
+    switch(type) {
+        case 0:
+            let a1 = Math.floor(Math.random() * 60) + 30; let a2 = Math.floor(Math.random() * 60) + 20; correct = 180 - a1 - a2;
+            q = `Cho tam giác ABC có góc A = ${a1}°, góc B = ${a2}°. Tính số đo góc C?`; break;
+        case 1: 
+            let topA = (Math.floor(Math.random() * 60) + 10) * 2; correct = (180 - topA) / 2;
+            q = `Tam giác ABC cân tại A, có góc ở đỉnh A = ${topA}°. Tính số đo góc ở đáy B?`; break;
+        case 2:
+            let baseA = Math.floor(Math.random() * 60) + 15; correct = 180 - (baseA * 2);
+            q = `Tam giác ABC cân tại A, có góc ở đáy B = ${baseA}°. Tính số đo góc ở đỉnh A?`; break;
+        case 3:
+            let s1 = Math.floor(Math.random() * 5) + 3; let s2 = Math.floor(Math.random() * 5) + 3;
+            let minS = Math.abs(s1 - s2) + 1; let maxS = s1 + s2 - 1;
+            correct = Math.floor(Math.random() * (maxS - minS + 1)) + minS; 
+            q = `Tam giác có độ dài hai cạnh là ${s1}cm và ${s2}cm. Cạnh thứ ba (số nguyên) CÓ THỂ là?`;
+            options = [correct, s1+s2, s1+s2+2, Math.abs(s1-s2)]; break;
+        case 4: 
+            let len = (Math.floor(Math.random() * 5) + 2) * 3; correct = (len / 3) * 2;
+            q = `Cho tam giác ABC, AM là đường trung tuyến dài ${len}cm. G là trọng tâm. Tính độ dài đoạn AG?`; break;
+        case 5:
+            let theoryTypes = [
+                {t: "ba đường cao", a: "Trực tâm"}, {t: "ba đường trung tuyến", a: "Trọng tâm"},
+                {t: "ba đường phân giác", a: "Điểm cách đều 3 cạnh"}, {t: "ba đường trung trực", a: "Điểm cách đều 3 đỉnh"}
+            ];
+            let th = theoryTypes[Math.floor(Math.random()*theoryTypes.length)]; correct = th.a;
+            q = `Giao điểm của ${th.t} trong tam giác được gọi là gì / có tính chất gì?`;
+            options = ["Trực tâm", "Trọng tâm", "Điểm cách đều 3 cạnh", "Điểm cách đều 3 đỉnh"]; break;
+        case 6: 
+            correct = "Đường vuông góc ngắn hơn"; q = `Từ điểm A ngoài đường d, kẻ đường vuông góc AH và đường xiên AM. Khẳng định ĐÚNG?`;
+            options = [correct, "Đường vuông góc dài hơn", "Hai đường bằng nhau", "Không thể so sánh"]; break;
+        case 7: 
+            let v1 = Math.floor(Math.random() * 40) + 10; correct = 90 - v1;
+            q = `Tam giác ABC vuông tại A, có góc B = ${v1}°. Tính số đo góc C?`; break;
     }
 
-    // 4. Place Generators (1 gen per ~3 rooms)
-    let genRooms = [...roomsList];
-    genRooms.sort(() => Math.random() - 0.5); // Shuffle
+    if (options.length === 0) {
+        let ans = new Set([correct]);
+        while(ans.size < 4) {
+            let offset = Math.floor(Math.random() * 20) - 10; if(offset === 0) offset = 5;
+            if(correct + offset > 0 && typeof correct === 'number') ans.add(correct + offset);
+            else if(typeof correct === 'number') ans.add(correct + Math.abs(offset) + 5);
+        }
+        options = Array.from(ans);
+    }
+    options.sort(() => Math.random() - 0.5);
+    return { question: q, options: options, answer: correct };
+}
+
+function openQuiz(genId) {
+    gameState = 'QUIZ'; currentGen = generators.find(g => g.id === genId);
+    keys.w = keys.a = keys.s = keys.d = keys.e = false; 
+
+    let qData = generateQuestion();
+    document.getElementById("questionText").innerText = qData.question;
+    let optsDiv = document.getElementById("optionsContainer"); optsDiv.innerHTML = "";
     
-    // Pick 30 rooms for generators
-    for (let i = 0; i < TOTAL_GENS; i++) {
-        if (i >= genRooms.length) break;
-        placeGeneratorInRoom(genRooms[i]);
-    }
+    qData.options.forEach(opt => {
+        let btn = document.createElement("button"); btn.className = "option-btn";
+        btn.innerText = opt + (typeof opt === 'number' && qData.question.includes('độ') ? '°' : '');
+        if(typeof opt === 'number' && qData.question.includes('cm')) btn.innerText = opt + 'cm';
+        
+        btn.onclick = () => {
+            if (opt === qData.answer) {
+                currentGen.fixed = true; player.fixedCount++;
+                document.getElementById("genCount").innerText = player.fixedCount;
+                // Áp dụng điều kiện thắng 10 máy 
+                if(player.fixedCount === WIN_CONDITION) spawnExitDoor();
+                closeQuiz();
+            } else {
+                closeQuiz(); player.stunUntil = Date.now() + Math.floor(Math.random() * 4000) + 1000; 
+            }
+        };
+        optsDiv.appendChild(btn);
+    });
+    document.getElementById("quizScreen").style.display = "flex";
+}
+function closeQuiz() { document.getElementById("quizScreen").style.display = "none"; gameState = 'PLAYING'; currentGen = null; }
 
-    // 5. Place Player in the first room
-    player.x = (roomsList[0].x + roomsList[0].w / 2) * TILE_SIZE;
-    player.y = (roomsList[0].y + roomsList[0].h / 2) * TILE_SIZE;
-
-    // 6. Place Monster far away (last room)
-    monster.x = (roomsList[roomsList.length - 1].x + roomsList[roomsList.length - 1].w / 2) * TILE_SIZE;
-    monster.y = (roomsList[roomsList.length - 1].y + roomsList[roomsList.length - 1].h / 2) * TILE_SIZE;
+function spawnExitDoor() {
+    let validRooms = rooms.filter(r => Math.hypot((r.x + r.w/2)*TILE_SIZE - player.x, (r.y + r.h/2)*TILE_SIZE - player.y) > 30 * TILE_SIZE);
+    let r = validRooms.length > 0 ? validRooms[Math.floor(Math.random() * validRooms.length)] : rooms[0];
+    exitDoor = { x: (r.x + r.w/2)*TILE_SIZE, y: (r.y + r.h/2)*TILE_SIZE };
 }
 
-function carveCorridor(x1, y1, x2, y2) {
-    let x = x1, y = y1;
-    while (x !== x2) {
-        if (mapGrid[y][x] === 0) mapGrid[y][x] = 2; // Corridor
-        x += (x2 > x) ? 1 : -1;
-        // Thêm độ rộng cho hành lang
-        if(mapGrid[y+1] && mapGrid[y+1][x] === 0) mapGrid[y+1][x] = 2; 
+/**
+ * ==========================================
+ * 4. LOGIC VẬT LÝ, VA CHẠM & CẬP NHẬT
+ * ==========================================
+ */
+let lastTime = 0; let dfTimer = 0;
+
+function update(dt) {
+    if (gameState !== 'PLAYING') return;
+    let now = Date.now(); let isStunned = now < player.stunUntil;
+
+    // --- Cập nhật Nhân vật ---
+    if (!isStunned) {
+        player.vx = 0; player.vy = 0;
+        if(keys.w) player.vy = -1; if(keys.s) player.vy = 1;
+        if(keys.a) player.vx = -1; if(keys.d) player.vx = 1;
+
+        if(player.vx !== 0 && player.vy !== 0) {
+            let len = Math.sqrt(player.vx*player.vx + player.vy*player.vy);
+            player.vx /= len; player.vy /= len;
+        }
+        if (player.vx !== 0 || player.vy !== 0) player.angle = Math.atan2(player.vy, player.vx);
+
+        let newPx = player.x + player.vx * player.speed * dt;
+        let newPy = player.y + player.vy * player.speed * dt;
+        // Trượt nhẹ khi chạm góc tường 
+        if (!checkWallCollision(newPx, player.y, player.radius)) player.x = newPx;
+        if (!checkWallCollision(player.x, newPy, player.radius)) player.y = newPy;
     }
-    while (y !== y2) {
-        if (mapGrid[y][x] === 0) mapGrid[y][x] = 2;
-        y += (y2 > y) ? 1 : -1;
-        if(mapGrid[y][x+1] === 0) mapGrid[y][x+1] = 2;
+
+    if (!isStunned && keys.e) {
+        for(let g of generators) {
+            if(!g.fixed && Math.hypot(g.x - player.x, g.y - player.y) < 70) { openQuiz(g.id); break; }
+        }
     }
+
+    // --- Cập nhật Quái vật ---
+    dfTimer += dt; if (dfTimer > 0.3) { updateDistanceField(); dfTimer = 0; }
+
+    let mxTile = Math.floor(monster.x / TILE_SIZE); let myTile = Math.floor(monster.y / TILE_SIZE);
+    let bestX = mxTile, bestY = myTile; let minD = 999999;
+    
+    if (mxTile >= 0 && mxTile < GRID_SIZE && myTile >= 0 && myTile < GRID_SIZE) {
+        let dVec = [ {x:0,y:-1}, {x:1,y:0}, {x:0,y:1}, {x:-1,y:0}, {x:1,y:-1}, {x:1,y:1}, {x:-1,y:1}, {x:-1,y:-1} ];
+        for(let d of dVec) {
+            let nx = mxTile + d.x; let ny = myTile + d.y;
+            if(nx>=0 && nx<GRID_SIZE && ny>=0 && ny<GRID_SIZE && distanceField[ny][nx] < minD) { 
+                minD = distanceField[ny][nx]; bestX = nx; bestY = ny; 
+            }
+        }
+    }
+
+    let targetMx = bestX * TILE_SIZE + TILE_SIZE/2; let targetMy = bestY * TILE_SIZE + TILE_SIZE/2;
+    let distToP = Math.hypot(player.x - monster.x, player.y - monster.y);
+    if(distToP < TILE_SIZE * 1.5) { targetMx = player.x; targetMy = player.y; }
+
+    let mAngle = Math.atan2(targetMy - monster.y, targetMx - monster.x);
+    let newMx = monster.x + Math.cos(mAngle) * monster.speed * dt;
+    let newMy = monster.y + Math.sin(mAngle) * monster.speed * dt;
+    
+    if (!checkWallCollision(newMx, monster.y, 15)) monster.x = newMx;
+    if (!checkWallCollision(monster.x, newMy, 15)) monster.y = newMy;
+
+    // Quái vật bắn đạn 
+    if (now - monster.lastShootTime > 1000 && distToP < TILE_SIZE * 7) { 
+        let shootAngle = Math.atan2(player.y - monster.y, player.x - monster.x);
+        bullets.push({
+            x: monster.x, y: monster.y, radius: 4,
+            vx: Math.cos(shootAngle) * (player.speed * 2), vy: Math.sin(shootAngle) * (player.speed * 2)
+        });
+        monster.lastShootTime = now;
+    }
+
+    // --- Cập nhật Đạn bay ---
+    for (let i = bullets.length - 1; i >= 0; i--) {
+        let b = bullets[i];
+        b.x += b.vx * dt; b.y += b.vy * dt;
+
+        if (checkWallCollision(b.x, b.y, b.radius)) { bullets.splice(i, 1); continue; }
+
+        if (Math.hypot(b.x - player.x, b.y - player.y) < player.radius + b.radius) { 
+            bullets.splice(i, 1); player.hp--; document.getElementById("hpCount").innerText = player.hp;
+            
+            let dmgDiv = document.getElementById("damageOverlay");
+            dmgDiv.style.opacity = "0.5"; setTimeout(() => dmgDiv.style.opacity = "0", 150);
+            if (player.hp <= 0) endGame(false);
+        }
+    }
+
+    // --- Kiểm tra cửa Thoát ---
+    if (exitDoor && Math.hypot(player.x - exitDoor.x, player.y - exitDoor.y) < TILE_SIZE) endGame(true);
 }
 
-function placeGeneratorInRoom(room) {
-    // Find a wall adjacent tile inside the room
-    let placed = false;
-    // Try to place on the top wall of the room
-    for (let c = room.x; c < room.x + room.w; c++) {
-        if (mapGrid[room.y - 1][c] === 0 && mapGrid[room.y][c] === 1) { // Wall above
-            generators.push({
-                cx: c * TILE_SIZE + TILE_SIZE / 2,
-                cy: room.y * TILE_SIZE + 15,
-                wallDir: 'TOP',
-                fixed: false
-            });
-            placed = true; break;
-        }
-    }
-    if(placed) return;
-
-    // Try Left Wall
-    for (let r = room.y; r < room.y + room.h; r++) {
-        if (mapGrid[r][room.x - 1] === 0 && mapGrid[r][room.x] === 1) {
-            generators.push({
-                cx: room.x * TILE_SIZE + 15,
-                cy: r * TILE_SIZE + TILE_SIZE / 2,
-                wallDir: 'LEFT',
-                fixed: false
-            });
-            placed = true; break;
-        }
-    }
-}
-
-/** MAP UTILS */
-function isSolid(x, y, size=1) {
-    let padding = size / 2;
-    let corners = [
-        { cx: x - padding, cy: y - padding },
-        { cx: x + padding, cy: y - padding },
-        { cx: x - padding, cy: y + padding },
-        { cx: x + padding, cy: y + padding }
-    ];
-    for (let p of corners) {
-        let c = Math.floor(p.cx / TILE_SIZE);
-        let r = Math.floor(p.cy / TILE_SIZE);
-        if (c < 0 || c >= MAP_COLS || r < 0 || r >= MAP_ROWS || mapGrid[r][c] === 0) {
-            return true;
-        }
+function checkWallCollision(x, y, r) {
+    let checkPts = [ {px: x-r, py: y-r}, {px: x+r, py: y-r}, {px: x-r, py: y+r}, {px: x+r, py: y+r} ];
+    for (let pt of checkPts) {
+        let tx = Math.floor(pt.px / TILE_SIZE); let ty = Math.floor(pt.py / TILE_SIZE);
+        if (tx < 0 || tx >= GRID_SIZE || ty < 0 || ty >= GRID_SIZE || map[ty][tx] === WALL) return true;
     }
     return false;
 }
 
-/** BFS FLOW FIELD FOR MONSTER PATHFINDING */
-function updateFlowField() {
-    for (let r = 0; r < MAP_ROWS; r++) {
-        for (let c = 0; c < MAP_COLS; c++) {
-            flowField[r][c] = 9999;
-        }
-    }
-    
-    let pr = Math.floor(player.y / TILE_SIZE);
-    let pc = Math.floor(player.x / TILE_SIZE);
-    
-    if (pr < 0 || pr >= MAP_ROWS || pc < 0 || pc >= MAP_COLS) return;
-
-    let queue = [{ r: pr, c: pc, d: 0 }];
-    flowField[pr][pc] = 0;
-
-    let head = 0;
-    // BFS traversal
-    while (head < queue.length) {
-        let curr = queue[head++];
-        let neighbors = [[0, -1], [0, 1], [-1, 0], [1, 0]]; // UP DOWN LEFT RIGHT
-        
-        for (let n of neighbors) {
-            let nr = curr.r + n[1];
-            let nc = curr.c + n[0];
-            if (nr >= 0 && nr < MAP_ROWS && nc >= 0 && nc < MAP_COLS) {
-                if (mapGrid[nr][nc] !== 0 && flowField[nr][nc] > curr.d + 1) {
-                    flowField[nr][nc] = curr.d + 1;
-                    queue.push({ r: nr, c: nc, d: curr.d + 1 });
-                }
-            }
-        }
-    }
-}
-
-/** GAME LOGIC UPDATE */
-function update(dt) {
+/**
+ * ==========================================
+ * 5. HỆ THỐNG HIỂN THỊ HÌNH ẢNH
+ * ==========================================
+ */
+function draw() {
     if (gameState !== 'PLAYING') return;
 
-    // Timer
-    playTime = (Date.now() - startTime) / 1000;
-    timerVal.innerText = formatTime(playTime);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = COLOR_WALL; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.translate(canvas.width/2 - player.x, canvas.height/2 - player.y); // Focus camera
 
-    // Update Stun
-    if (player.stunTimer > 0) {
-        player.stunTimer -= dt;
-        if (player.stunTimer <= 0) player.stunTimer = 0;
-    }
+    let startC = Math.max(0, Math.floor((player.x - canvas.width/2)/TILE_SIZE));
+    let endC = Math.min(GRID_SIZE, Math.floor((player.x + canvas.width/2)/TILE_SIZE) + 1);
+    let startR = Math.max(0, Math.floor((player.y - canvas.height/2)/TILE_SIZE));
+    let endR = Math.min(GRID_SIZE, Math.floor((player.y + canvas.height/2)/TILE_SIZE) + 1);
 
-    // Player Movement (Only if not stunned)
-    if (player.stunTimer === 0) {
-        let dx = 0, dy = 0;
-        if (keys.w) dy -= 1;
-        if (keys.s) dy += 1;
-        if (keys.a) dx -= 1;
-        if (keys.d) dx += 1;
-
-        if (dx !== 0 || dy !== 0) {
-            // Normalize
-            let len = Math.hypot(dx, dy);
-            dx /= len; dy /= len;
-            player.angle = Math.atan2(dy, dx);
-            
-            let moveX = dx * PLAYER_SPEED * dt;
-            let moveY = dy * PLAYER_SPEED * dt;
-
-            // Slide collision
-            if (!isSolid(player.x + moveX, player.y, player.w)) player.x += moveX;
-            if (!isSolid(player.x, player.y + moveY, player.h)) player.y += moveY;
-        }
-
-        // Generator Interaction Check
-        interactionTarget = null;
-        for (let g of generators) {
-            if (!g.fixed) {
-                let dist = Math.hypot(player.x - g.cx, player.y - g.cy);
-                if (dist < TILE_SIZE) {
-                    interactionTarget = g;
-                    break;
-                }
-            }
-        }
-
-        if (interactionTarget) {
-            interactionHud.style.display = 'block';
-        } else {
-            interactionHud.style.display = 'none';
-        }
-
-        // Check Exit Door Win
-        if (doorIsOpen && exitDoor) {
-            let distToDoor = Math.hypot(player.x - exitDoor.x, player.y - exitDoor.y);
-            if (distToDoor < TILE_SIZE) {
-                gameWin();
-            }
-        }
-    } else {
-        interactionHud.style.display = 'none';
-    }
-
-    // Pathfinding update tick (Update flow field 4 times a second)
-    pathUpdateTimer += dt;
-    if (pathUpdateTimer > 0.25) {
-        updateFlowField();
-        pathUpdateTimer = 0;
-    }
-
-    // Monster Logic (Always moves towards player, shoots every 1s)
-    let mc = Math.floor(monster.x / TILE_SIZE);
-    let mr = Math.floor(monster.y / TILE_SIZE);
-    
-    // Find best neighbor tile
-    let bestD = 9999;
-    let targetC = mc, targetR = mr;
-    let neighbors = [[0, -1], [0, 1], [-1, 0], [1, 0], [-1, -1], [1, -1], [-1, 1], [1, 1], [0,0]];
-    
-    for (let n of neighbors) {
-        let nr = mr + n[1];
-        let nc = mc + n[0];
-        if (nr >= 0 && nr < MAP_ROWS && nc >= 0 && nc < MAP_COLS && mapGrid[nr][nc] !== 0) {
-            if (flowField[nr][nc] < bestD) {
-                bestD = flowField[nr][nc];
-                targetC = nc; targetR = nr;
+    // Vẽ cấu trúc bản đồ
+    for (let y = startR; y < endR; y++) {
+        for (let x = startC; x < endC; x++) {
+            if (map[y][x] === CORRIDOR) {
+                ctx.fillStyle = COLOR_CORRIDOR; ctx.fillRect(x*TILE_SIZE, y*TILE_SIZE, TILE_SIZE+1, TILE_SIZE+1);
+            } else if (map[y][x] === ROOM) {
+                ctx.fillStyle = COLOR_ROOM; ctx.fillRect(x*TILE_SIZE, y*TILE_SIZE, TILE_SIZE+1, TILE_SIZE+1);
             }
         }
     }
 
-    // Move towards target cell center
-    let tx = targetC * TILE_SIZE + TILE_SIZE/2;
-    let ty = targetR * TILE_SIZE + TILE_SIZE/2;
-    
-    let mdx = tx - monster.x;
-    let mdy = ty - monster.y;
-    let mLen = Math.hypot(mdx, mdy);
-    
-    if (mLen > 5) {
-        mdx /= mLen; mdy /= mLen;
-        let mMoveX = mdx * MONSTER_SPEED * dt;
-        let mMoveY = mdy * MONSTER_SPEED * dt;
-        if (!isSolid(monster.x + mMoveX, monster.y, monster.w)) monster.x += mMoveX;
-        if (!isSolid(monster.x, monster.y + mMoveY, monster.h)) monster.y += mMoveY;
-    }
+    let isStunned = Date.now() < player.stunUntil;
 
-    // Monster Shooting
-    monster.lastShotTimer += dt;
-    if (monster.lastShotTimer >= 1.0) {
-        // Line of sight roughly - just shoot at player angle
-        let ang = Math.atan2(player.y - monster.y, player.x - monster.x);
-        bullets.push({
-            x: monster.x, y: monster.y,
-            vx: Math.cos(ang) * BULLET_SPEED,
-            vy: Math.sin(ang) * BULLET_SPEED,
-            radius: 8
-        });
-        monster.lastShotTimer = 0;
-    }
+    // Máy phát điện
+    ctx.font = "bold 15px Arial"; ctx.textAlign = "center";
+    generators.forEach(g => {
+        if(Math.abs(g.x - player.x) < canvas.width && Math.abs(g.y - player.y) < canvas.height) {
+            ctx.save(); ctx.translate(g.x, g.y); ctx.rotate(g.rot);
+            ctx.fillStyle = g.fixed ? COLOR_GEN_FIXED : COLOR_GEN_NORMAL;
+            ctx.beginPath(); ctx.moveTo(-15, -15); ctx.lineTo(15, -15); ctx.lineTo(25, 20); ctx.lineTo(-25, 20);
+            ctx.closePath(); ctx.fill(); ctx.lineWidth = 2; ctx.stroke(); ctx.restore();
 
-    // Bullets Logic
-    for (let i = bullets.length - 1; i >= 0; i--) {
-        let b = bullets[i];
-        b.x += b.vx * dt;
-        b.y += b.vy * dt;
-
-        // Wall Collision
-        if (isSolid(b.x, b.y, b.radius*2)) {
-            bullets.splice(i, 1);
-            continue;
-        }
-
-        // Player Collision
-        let hitDist = Math.hypot(b.x - player.x, b.y - player.y);
-        if (hitDist < (player.w/2 + b.radius)) {
-            bullets.splice(i, 1);
-            takeDamage();
-        }
-    }
-}
-
-/** RENDER FUNCTION */
-function draw() {
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    if (gameState === 'START') return;
-
-    ctx.save();
-    // Camera follow player
-    let camX = player.x - canvas.width / 2;
-    let camY = player.y - canvas.height / 2;
-    ctx.translate(-camX, -camY);
-
-    // Draw Map (Only visible tiles)
-    let startC = Math.max(0, Math.floor(camX / TILE_SIZE));
-    let endC = Math.min(MAP_COLS, startC + Math.ceil(canvas.width / TILE_SIZE) + 1);
-    let startR = Math.max(0, Math.floor(camY / TILE_SIZE));
-    let endR = Math.min(MAP_ROWS, startR + Math.ceil(canvas.height / TILE_SIZE) + 1);
-
-    for (let r = startR; r < endR; r++) {
-        for (let c = startC; c < endC; c++) {
-            let tile = mapGrid[r][c];
-            let tx = c * TILE_SIZE;
-            let ty = r * TILE_SIZE;
-
-            if (tile === 0) {
-                ctx.fillStyle = COLOR_WALL;
-                ctx.fillRect(tx, ty, TILE_SIZE, TILE_SIZE);
-                // Grid borders for walls to make it look nicer
-                ctx.strokeStyle = '#0e2b0e';
-                ctx.strokeRect(tx, ty, TILE_SIZE, TILE_SIZE);
-            } else if (tile === 1) {
-                ctx.fillStyle = COLOR_ROOM;
-                ctx.fillRect(tx, ty, TILE_SIZE, TILE_SIZE);
-            } else if (tile === 2) {
-                ctx.fillStyle = COLOR_CORRIDOR;
-                ctx.fillRect(tx, ty, TILE_SIZE, TILE_SIZE);
+            if(!g.fixed && !isStunned && Math.hypot(g.x - player.x, g.y - player.y) < 70) {
+                ctx.fillStyle = "white"; ctx.fillText("[E] Sửa", g.x, g.y - 30);
             }
         }
-    }
-
-    // Draw Exit Door
-    if (doorIsOpen && exitDoor) {
-        ctx.fillStyle = '#FFD700'; // Cửa vàng sáng
-        ctx.fillRect(exitDoor.x - 30, exitDoor.y - 30, 60, 60);
-        ctx.fillStyle = '#000';
-        ctx.font = '20px sans-serif';
-        ctx.fillText("EXIT", exitDoor.x - 20, exitDoor.y + 7);
-    }
-
-    // Draw Generators (Hình thang cân)
-    for (let g of generators) {
-        ctx.save();
-        ctx.translate(g.cx, g.cy);
-        
-        // Rotate to align base to wall
-        if (g.wallDir === 'TOP') ctx.rotate(0);
-        if (g.wallDir === 'LEFT') ctx.rotate(-Math.PI/2);
-        
-        ctx.fillStyle = g.fixed ? COLOR_GEN_FIXED : COLOR_GEN_NORMAL;
-        ctx.beginPath();
-        // Hình thang đáy lớn ép vào tường (phía trên, y âm)
-        ctx.moveTo(-30, -15); // Trên trái (đáy lớn)
-        ctx.lineTo(30, -15);  // Trên phải (đáy lớn)
-        ctx.lineTo(20, 15);   // Dưới phải (đáy bé)
-        ctx.lineTo(-20, 15);  // Dưới trái (đáy bé)
-        ctx.closePath();
-        ctx.fill();
-        ctx.strokeStyle = '#333';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        // Nút E nếu gần
-        if (interactionTarget === g && !g.fixed && player.stunTimer === 0) {
-            ctx.fillStyle = '#fff';
-            ctx.font = 'bold 20px sans-serif';
-            ctx.fillText("E", -6, -25);
-        }
-        ctx.restore();
-    }
-
-    // Draw Bullets
-    for (let b of bullets) {
-        ctx.fillStyle = '#000';
-        ctx.beginPath();
-        ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
-        ctx.fill();
-    }
-
-    // Draw Monster (Red Square)
-    ctx.fillStyle = monster.color;
-    ctx.fillRect(monster.x - monster.w/2, monster.y - monster.h/2, monster.w, monster.h);
-    // Draw monster eyes to indicate direction it's looking
-    ctx.fillStyle = '#000';
-    let mang = Math.atan2(player.y - monster.y, player.x - monster.x);
-    ctx.beginPath();
-    ctx.arc(monster.x + Math.cos(mang)*10 - 5, monster.y + Math.sin(mang)*10, 3, 0, Math.PI*2);
-    ctx.arc(monster.x + Math.cos(mang)*10 + 5, monster.y + Math.sin(mang)*10, 3, 0, Math.PI*2);
-    ctx.fill();
-
-    // Draw Player (Triangle)
-    ctx.save();
-    ctx.translate(player.x, player.y);
-    ctx.rotate(player.angle);
-    ctx.fillStyle = player.stunTimer > 0 ? player.stunColor : player.color;
-    ctx.beginPath();
-    ctx.moveTo(20, 0);       // Mũi nhọn
-    ctx.lineTo(-15, -15);    // Góc sau trái
-    ctx.lineTo(-15, 15);     // Góc sau phải
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = '#fff';
-    ctx.stroke();
-    ctx.restore();
-
-    // Draw Stun Indicator
-    if (player.stunTimer > 0) {
-        ctx.fillStyle = 'yellow';
-        ctx.font = 'bold 24px Arial';
-        ctx.fillText(Math.ceil(player.stunTimer) + "s", player.x - 10, player.y - 30);
-    }
-
-    ctx.restore();
-
-    // Draw Compass/Arrow to Exit Door on UI layer of Canvas
-    if (doorIsOpen && exitDoor) {
-        let dx = exitDoor.x - player.x;
-        let dy = exitDoor.y - player.y;
-        let dist = Math.hypot(dx, dy);
-        
-        // Chỉ hiện mũi tên nếu cửa ở xa ngoài màn hình
-        if (dist > Math.max(canvas.width, canvas.height) / 2) {
-            let ang = Math.atan2(dy, dx);
-            let arrowX = canvas.width / 2 + Math.cos(ang) * 150;
-            let arrowY = canvas.height / 2 + Math.sin(ang) * 150;
-            
-            ctx.save();
-            ctx.translate(arrowX, arrowY);
-            ctx.rotate(ang);
-            ctx.fillStyle = '#FFD700';
-            ctx.beginPath();
-            ctx.moveTo(20, 0);
-            ctx.lineTo(-15, -15);
-            ctx.lineTo(-5, 0);
-            ctx.lineTo(-15, 15);
-            ctx.closePath();
-            ctx.fill();
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-            ctx.restore();
-        }
-    }
-}
-
-/** GAME LOOP */
-function loop(timestamp) {
-    let dt = (timestamp - lastTime) / 1000;
-    lastTime = timestamp;
-    if (dt > 0.1) dt = 0.1; // Cap dt
-
-    update(dt);
-    draw();
-
-    requestAnimationFrame(loop);
-}
-
-/** INTERACTIONS & EVENTS */
-window.addEventListener('keydown', (e) => {
-    let k = e.key.toLowerCase();
-    if (keys.hasOwnProperty(k)) keys[k] = true;
-
-    // Interaction 'E'
-    if (k === 'e' && gameState === 'PLAYING' && interactionTarget && player.stunTimer === 0) {
-        openQuestion();
-    }
-});
-window.addEventListener('keyup', (e) => {
-    let k = e.key.toLowerCase();
-    if (keys.hasOwnProperty(k)) keys[k] = false;
-});
-
-function takeDamage() {
-    if(gameState !== 'PLAYING') return;
-    player.hp--;
-    hpVal.innerText = `${player.hp}/${MAX_HP}`;
-    if (player.hp <= 0) {
-        gameOver();
-    }
-}
-
-function openQuestion() {
-    gameState = 'QUESTION';
-    keys.w = keys.a = keys.s = keys.d = false; // Reset movement
-    qScreen.classList.remove('hidden');
-
-    // Pick random question
-    let qObj = QUESTIONS[Math.floor(Math.random() * QUESTIONS.length)];
-    document.getElementById('question-text').innerText = qObj.q;
-    
-    let ansHTML = '';
-    qObj.options.forEach((opt, idx) => {
-        ansHTML += `<button class="answer-btn" onclick="answerQuestion(${idx === qObj.ans})">${opt}</button>`;
     });
-    document.getElementById('answers-container').innerHTML = ansHTML;
-}
 
-function answerQuestion(isCorrect) {
-    qScreen.classList.add('hidden');
-    gameState = 'PLAYING';
+    if (exitDoor) {
+        ctx.fillStyle = "#FFD700"; ctx.fillRect(exitDoor.x - 20, exitDoor.y - 20, 40, 40);
+        ctx.fillStyle = "black"; ctx.fillText("EXIT", exitDoor.x, exitDoor.y + 5);
+    }
+
+    // Đạn & Kẻ thù
+    ctx.fillStyle = COLOR_BULLET;
+    for(let b of bullets) { ctx.beginPath(); ctx.arc(b.x, b.y, b.radius, 0, Math.PI*2); ctx.fill(); }
+
+    ctx.fillStyle = COLOR_MONSTER; ctx.fillRect(monster.x - 15, monster.y - 15, 30, 30);
+    let eyeAngle = Math.atan2(player.y - monster.y, player.x - monster.x);
+    let ex = Math.cos(eyeAngle) * 5; let ey = Math.sin(eyeAngle) * 5;
+    ctx.fillStyle = "black";
+    ctx.beginPath(); ctx.arc(monster.x - 6 + ex, monster.y - 5 + ey, 3.5, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(monster.x + 6 + ex, monster.y - 5 + ey, 3.5, 0, Math.PI*2); ctx.fill();
+
+    // Nhân vật
+    ctx.save(); ctx.translate(player.x, player.y); ctx.rotate(player.angle);
+    ctx.fillStyle = isStunned ? COLOR_PLAYER_STUN : COLOR_PLAYER;
+    ctx.beginPath(); ctx.moveTo(player.radius, 0); ctx.lineTo(-player.radius, -player.radius*0.8); ctx.lineTo(-player.radius, player.radius*0.8);
+    ctx.closePath(); ctx.fill(); ctx.lineWidth = 1.5; ctx.stroke(); ctx.restore();
     
-    if (isCorrect) {
-        // Success
-        interactionTarget.fixed = true;
-        player.fixedGens++;
-        genVal.innerText = `${player.fixedGens}/${TOTAL_GENS}`;
-        interactionTarget = null;
-        interactionHud.style.display = 'none';
+    if(isStunned) {
+        ctx.fillStyle = "red"; ctx.font = "bold 16px Arial";
+        ctx.fillText("CHOÁNG " + Math.ceil((player.stunUntil - Date.now())/1000) + "s", player.x, player.y - 25);
+    }
 
-        // Check if door should open
-        if (player.fixedGens >= TARGET_GENS && !doorIsOpen) {
-            openExitDoor();
-        }
-    } else {
-        // Fail - Stun 1 to 5 seconds
-        player.stunTimer = Math.random() * 4 + 1; 
-        interactionTarget = null;
-        interactionHud.style.display = 'none';
+    // Hệ thống Mũi tên dẫn đường
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    if (exitDoor) {
+        let dx = exitDoor.x - player.x; let dy = exitDoor.y - player.y;
+        let arrowAngle = Math.atan2(dy, dx);
+        let arrowX = canvas.width/2 + Math.cos(arrowAngle) * 100;
+        let arrowY = canvas.height/2 + Math.sin(arrowAngle) * 100;
+        
+        ctx.save(); ctx.translate(arrowX, arrowY); ctx.rotate(arrowAngle);
+        ctx.fillStyle = "#00FFFF";
+        ctx.beginPath(); ctx.moveTo(15, 0); ctx.lineTo(-10, -10); ctx.lineTo(-5, 0); ctx.lineTo(-10, 10);
+        ctx.closePath(); ctx.fill(); ctx.strokeStyle = "white"; ctx.stroke(); ctx.restore();
+        
+        ctx.fillStyle = "#00FFFF"; ctx.font = "bold 14px Arial"; ctx.textAlign = "center";
+        ctx.fillText(Math.floor(Math.hypot(dx, dy)/TILE_SIZE) + "m", arrowX, arrowY + 28);
     }
 }
 
-function openExitDoor() {
-    doorIsOpen = true;
-    // Tìm căn phòng xa người chơi nhất để đặt cửa
-    let maxDist = 0;
-    let bestRoom = roomsList[0];
-    for (let r of roomsList) {
-        let rx = r.x * TILE_SIZE;
-        let ry = r.y * TILE_SIZE;
-        let d = Math.hypot(rx - player.x, ry - player.y);
-        if (d > maxDist) {
-            maxDist = d;
-            bestRoom = r;
-        }
+/**
+ * ==========================================
+ * 6. ĐIỀU HƯỚNG VÒNG LẶP TRÒ CHƠI
+ * ==========================================
+ */
+function gameLoop(timestamp) {
+    if (!lastTime) lastTime = timestamp;
+    let dt = (timestamp - lastTime) / 1000; lastTime = timestamp;
+    if (dt > 0.1) dt = 0.1; 
+
+    if (gameState === 'PLAYING') {
+        update(dt); draw();
+        let elapsed = Math.floor((Date.now() - startTime) / 1000);
+        document.getElementById("timerDisplay").innerText = `Thời gian: ${String(Math.floor(elapsed/60)).padStart(2, '0')}:${String(elapsed%60).padStart(2, '0')}`;
     }
-    
-    exitDoor = {
-        x: (bestRoom.x + bestRoom.w / 2) * TILE_SIZE,
-        y: (bestRoom.y + bestRoom.h / 2) * TILE_SIZE
-    };
-    alert("Cửa thoát hiểm đã mở! Hãy đi theo mũi tên màu vàng để trốn thoát!");
+    requestAnimationFrame(gameLoop);
 }
 
-function formatTime(seconds) {
-    let m = Math.floor(seconds / 60).toString().padStart(2, '0');
-    let s = Math.floor(seconds % 60).toString().padStart(2, '0');
-    return `${m}:${s}`;
-}
-
-/** GAME STATE MANAGERS */
 function startGame() {
-    document.getElementById('start-screen').classList.add('hidden');
-    uiLayer.classList.remove('hidden');
-    initMap();
-    gameState = 'PLAYING';
-    startTime = Date.now();
-    lastTime = performance.now();
-    requestAnimationFrame(loop);
+    document.getElementById("startScreen").style.display = "none";
+    generateMap(); updateDistanceField(); 
+    gameState = 'PLAYING'; startTime = Date.now();
+    requestAnimationFrame(gameLoop);
 }
 
-function gameOver() {
-    gameState = 'GAMEOVER';
-    uiLayer.classList.add('hidden');
-    document.getElementById('end-screen').classList.remove('hidden');
-    document.getElementById('end-time').innerText = formatTime(playTime);
-}
+function endGame(win) {
+    gameState = win ? 'WIN' : 'LOSE'; endTime = Date.now();
+    let elapsed = Math.floor((endTime - startTime) / 1000);
+    let timeStr = `${String(Math.floor(elapsed/60)).padStart(2, '0')}:${String(elapsed%60).padStart(2, '0')}`;
 
-function gameWin() {
-    gameState = 'WIN';
-    uiLayer.classList.add('hidden');
-    let endScreen = document.getElementById('end-screen');
-    endScreen.classList.remove('hidden');
-    document.getElementById('end-title').innerText = "CHIẾN THẮNG!";
-    document.getElementById('end-title').style.color = "#4CAF50";
-    document.getElementById('end-desc').innerText = "Chúc mừng Thiện, bạn đã tẩu thoát thành công khỏi mê cung!";
-    document.getElementById('end-time').innerText = formatTime(playTime);
+    document.getElementById("endScreen").style.display = "flex";
+    document.getElementById("endTitle").innerText = win ? "CHIẾN THẮNG!" : "BẠN ĐÃ CHẾT";
+    document.getElementById("endTitle").style.color = win ? "#4CAF50" : "#F44336";
+    document.getElementById("endMessage").innerHTML = win 
+        ? `Trốn thoát thành công!<br>Thời gian: <b>${timeStr}</b>` 
+        // Hiển thị số máy yêu cầu là 10 ở màn hình kết thúc
+        : `Quái vật đã hạ gục bạn.<br>Thời gian sinh tồn: <b>${timeStr}</b><br>Máy đã sửa: <b>${player.fixedCount}/${WIN_CONDITION}</b>`;
 }
-
-// Initial Setup Call
-resize();
-// Wait for player to click START
 </script>
-
 </body>
 </html>
