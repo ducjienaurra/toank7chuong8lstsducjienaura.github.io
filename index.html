@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ESCAPE EPSTEINS MANSION</title>
+    <title>ESCAPE EPSTEIN'S MANSION</title>
     <style>
         /* Khóa thao tác cuộn, phóng to trên điện thoại */
         body, html {
@@ -61,26 +61,17 @@
         #questionText { font-size: 18px; margin-bottom: 25px; font-weight: bold; line-height: 1.4;}
         .options { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         
-        /* Cập nhật Animation Hover cho nút lựa chọn */
         .option-btn {
             background: #2196F3; color: white; padding: 15px; font-size: 16px;
             border: 2px solid transparent; border-radius: 8px; cursor: pointer;
-            font-weight: bold; 
-            transition: all 0.3s ease; /* Hiệu ứng chuyển động mượt 0.3s */
+            font-weight: bold; transition: all 0.3s ease;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
-        /* Khi đưa chuột vào (Hover) */
         .option-btn:hover {
-            background: #1976D2; 
-            transform: translateY(-4px) scale(1.02); /* Nổi lên và to ra nhẹ */
-            box-shadow: 0 8px 15px rgba(33, 150, 243, 0.4); /* Bóng xanh tỏa ra */
-            border: 2px solid #90CAF9; /* Viền sáng */
+            background: #1976D2; transform: translateY(-4px) scale(1.02); 
+            box-shadow: 0 8px 15px rgba(33, 150, 243, 0.4); border: 2px solid #90CAF9; 
         }
-        /* Khi bấm vào (Active) */
-        .option-btn:active {
-            transform: translateY(1px) scale(0.98); /* Lún xuống */
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
+        .option-btn:active { transform: translateY(1px) scale(0.98); box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
         
         #damageOverlay {
             position: absolute; top:0; left:0; width:100%; height:100%;
@@ -146,9 +137,9 @@
                 - <b>Kiến thức:</b> Toán Hình học lớp 7. Trả lời SAI bị <b>choáng ngẫu nhiên 1-5 giây</b>.<br>
                 - <b>Mục tiêu:</b> Sửa <b>10/30</b> máy, cửa thoát hiểm màu vàng sẽ mở ra.<br>
                 - <b>Nguy hiểm:</b> Quái vật tuần tra trong khu vực. Trúng 5 viên đạn = CHẾT.<br>
-                - <b>Điều khiển Thông Minh:</b> Chạm màn hình để gọi Joystick. Gõ phím WASD để tự động chuyển về giao diện PC.
+                - <b>Điều khiển:</b> Chạm màn hình để gọi Joystick. Gõ phím WASD để chuyển về PC.
             </p>
-            <button class="start-btn" onclick="startGame()">BẮT ĐẦU CHƠI</button>
+            <button class="start-btn" onclick="startGame()" ontouchstart="event.preventDefault(); startGame();">BẮT ĐẦU CHƠI</button>
         </div>
     </div>
 
@@ -164,7 +155,7 @@
         <div class="board">
             <h1 id="endTitle">KẾT THÚC</h1>
             <p id="endMessage" style="text-align: center; font-size: 18px;"></p>
-            <button class="start-btn" onclick="location.reload()">CHƠI LẠI</button>
+            <button class="start-btn" onclick="location.reload()" ontouchstart="event.preventDefault(); location.reload();">CHƠI LẠI</button>
         </div>
     </div>
 
@@ -266,4 +257,466 @@ function handleTouch(e) {
 
 function resetTouch(e) {
     e.preventDefault();
-    joyActive
+    joyActive = false; mobileVx = 0; mobileVy = 0;
+    joyStick.style.transform = `translate(0px, 0px)`;
+}
+
+joyBase.addEventListener('touchstart', handleTouch, {passive: false});
+joyBase.addEventListener('touchmove', handleTouch, {passive: false});
+joyBase.addEventListener('touchend', resetTouch);
+joyBase.addEventListener('touchcancel', resetTouch);
+
+actionBtn.addEventListener('touchstart', e => { e.preventDefault(); keys.e = true; }, {passive: false});
+actionBtn.addEventListener('touchend', e => { e.preventDefault(); keys.e = false; });
+actionBtn.addEventListener('touchcancel', e => { e.preventDefault(); keys.e = false; });
+
+/**
+ * ==========================================
+ * 3. THUẬT TOÁN ĐÀO MAP & KẾT NỐI HÀNH LANG
+ * ==========================================
+ */
+function generateMap() {
+    for (let y = 0; y < GRID_SIZE; y++) { map[y] = []; for (let x = 0; x < GRID_SIZE; x++) map[y][x] = WALL; }
+    let attempts = 0; rooms = [];
+    while(rooms.length < 35 && attempts < 2500) {
+        attempts++;
+        let w = Math.floor(Math.random() * 4) + 4; let h = Math.floor(Math.random() * 4) + 4;
+        let x = Math.floor(Math.random() * (GRID_SIZE - w - 8)) + 4; let y = Math.floor(Math.random() * (GRID_SIZE - h - 8)) + 4;
+        let canPlace = true;
+        for(let ry = y - 3; ry <= y + h + 2; ry++) {
+            for(let rx = x - 3; rx <= x + w + 2; rx++) { if(map[ry][rx] !== WALL) canPlace = false; }
+        }
+        if (canPlace) {
+            for(let ry = y; ry < y + h; ry++) { for(let rx = x; rx < x + w; rx++) map[ry][rx] = ROOM; }
+            for(let rx = x-1; rx <= x+w; rx++) { map[y-1][rx] = STRICT_WALL; map[y+h][rx] = STRICT_WALL; }
+            for(let ry = y-1; ry <= y+h; ry++) { map[ry][x-1] = STRICT_WALL; map[ry][x+w] = STRICT_WALL; }
+
+            let doorSide = Math.floor(Math.random() * 4);
+            let dx, dy, outX, outY, wallDir;
+            if (doorSide === 0) { dx = x + Math.floor(w/2); dy = y - 1; outX = dx; outY = dy - 1; wallDir = "TOP"; }
+            else if (doorSide === 1) { dx = x + Math.floor(w/2); dy = y + h; outX = dx; outY = dy + 1; wallDir = "BOTTOM"; }
+            else if (doorSide === 2) { dx = x - 1; dy = y + Math.floor(h/2); outX = dx - 1; outY = dy; wallDir = "LEFT"; }
+            else { dx = x + w; dy = y + Math.floor(h/2); outX = dx + 1; outY = dy; wallDir = "RIGHT"; }
+            
+            map[dy][dx] = DOOR; rooms.push({x, y, w, h, dx, dy, outX, outY, wallDir});
+        }
+    }
+
+    if (rooms.length > 0) {
+        let connected = [rooms[0]]; let unconnected = rooms.slice(1);
+        while (unconnected.length > 0) {
+            let start = unconnected[0];
+            connected.sort((a,b) => Math.hypot(a.outX - start.outX, a.outY - start.outY) - Math.hypot(b.outX - start.outX, b.outY - start.outY));
+            let target = connected[0];
+            let path = findAStarPath(start.outX, start.outY, target.outX, target.outY);
+            if (path) {
+                let corridorStyle = Math.floor(Math.random() * 3); 
+                path.forEach(p => {
+                    let minX = p.x, maxX = p.x, minY = p.y, maxY = p.y;
+                    if(corridorStyle === 1) { maxX += 1; maxY += 1; } 
+                    if(corridorStyle === 2) { minX -= 1; maxX += 1; minY -= 1; maxY += 1; } 
+                    for(let ey = minY; ey <= maxY; ey++) {
+                        for(let ex = minX; ex <= maxX; ex++) {
+                            if(ex > 0 && ex < GRID_SIZE-1 && ey > 0 && ey < GRID_SIZE-1 && map[ey][ex] === WALL) map[ey][ex] = CORRIDOR;
+                        }
+                    }
+                });
+                connected.push(start); unconnected.shift();
+            } else { unconnected.shift(); }
+        }
+    }
+
+    for(let y=0; y<GRID_SIZE; y++){
+        for(let x=0; x<GRID_SIZE; x++){
+            if(map[y][x] === DOOR) map[y][x] = CORRIDOR;
+            if(map[y][x] === STRICT_WALL) map[y][x] = WALL;
+        }
+    }
+
+    generators = [];
+    for(let i=0; i<Math.min(30, rooms.length); i++){
+        let r = rooms[i]; let gx, gy, gRot;
+        if (r.wallDir === "TOP") { gx = r.x + r.w/2; gy = r.y + r.h - 0.5; gRot = Math.PI; } 
+        else if (r.wallDir === "BOTTOM") { gx = r.x + r.w/2; gy = r.y - 0.5 + 1; gRot = 0; } 
+        else if (r.wallDir === "LEFT") { gx = r.x + r.w - 0.5; gy = r.y + r.h/2; gRot = -Math.PI/2; } 
+        else { gx = r.x - 0.5 + 1; gy = r.y + r.h/2; gRot = Math.PI/2; }
+        generators.push({ id: i, x: gx * TILE_SIZE, y: gy * TILE_SIZE, rot: gRot, fixed: false });
+    }
+
+    let pRoom = rooms[rooms.length - 1];
+    player.x = (pRoom.x + pRoom.w/2) * TILE_SIZE; player.y = (pRoom.y + pRoom.h/2) * TILE_SIZE;
+    let mRoom = rooms[0];
+    monster.x = (mRoom.x + mRoom.w/2) * TILE_SIZE; monster.y = (mRoom.y + mRoom.h/2) * TILE_SIZE;
+}
+
+function findAStarPath(sx, sy, tx, ty) {
+    let openSet = [{x: sx, y: sy, g: 0, f: 0, parent: null}];
+    let closedSet = new Set();
+    let hash = (x,y) => x + y * GRID_SIZE;
+
+    while(openSet.length > 0) {
+        openSet.sort((a,b) => a.f - b.f);
+        let curr = openSet.shift();
+        if (curr.x === tx && curr.y === ty) {
+            let path = []; let p = curr;
+            while(p) { path.push({x: p.x, y: p.y}); p = p.parent; }
+            return path;
+        }
+        closedSet.add(hash(curr.x, curr.y));
+        let dirs = [[0,-1],[1,0],[0,1],[-1,0]];
+        for(let d of dirs) {
+            let nx = curr.x + d[0]; let ny = curr.y + d[1];
+            if (nx < 1 || nx >= GRID_SIZE-1 || ny < 1 || ny >= GRID_SIZE-1) continue;
+            if (map[ny][nx] === ROOM || map[ny][nx] === STRICT_WALL) continue;
+            
+            let cost = (map[ny][nx] === CORRIDOR || map[ny][nx] === DOOR) ? 1 : 5;
+            let g = curr.g + cost; let h = Math.abs(nx - tx) + Math.abs(ny - ty); let f = g + h;
+            if (closedSet.has(hash(nx,ny))) continue;
+            let existing = openSet.find(o => o.x === nx && o.y === ny);
+            if (existing) { if (g < existing.g) { existing.g = g; existing.f = f; existing.parent = curr; } } 
+            else { openSet.push({x: nx, y: ny, g: g, f: f, parent: curr}); }
+        }
+    }
+    return null;
+}
+
+/**
+ * ==========================================
+ * 4. LOGIC AI & CÂU HỎI TRẮC NGHIỆM
+ * ==========================================
+ */
+function updateDistanceField() {
+    for (let y = 0; y < GRID_SIZE; y++) {
+        distanceField[y] = []; for (let x = 0; x < GRID_SIZE; x++) distanceField[y][x] = 999999;
+    }
+    let px = Math.floor(player.x / TILE_SIZE); let py = Math.floor(player.y / TILE_SIZE);
+    if (px<0||px>=GRID_SIZE||py<0||py>=GRID_SIZE || map[py][px] === WALL) return;
+
+    let queue = [{x: px, y: py}]; distanceField[py][px] = 0;
+    let dVec = [ {x:0,y:-1}, {x:1,y:0}, {x:0,y:1}, {x:-1,y:0}, {x:1,y:-1}, {x:1,y:1}, {x:-1,y:1}, {x:-1,y:-1} ];
+    while(queue.length > 0) {
+        let curr = queue.shift(); let cd = distanceField[curr.y][curr.x];
+        for(let d of dVec) {
+            let nx = curr.x + d.x; let ny = curr.y + d.y;
+            if (nx >= 0 && nx < GRID_SIZE && ny >= 0 && ny < GRID_SIZE && map[ny][nx] !== WALL) {
+                if(d.x !== 0 && d.y !== 0) { if (map[curr.y][nx] === WALL || map[ny][curr.x] === WALL) continue; }
+                let distInc = (d.x !== 0 && d.y !== 0) ? 1.414 : 1;
+                if (distanceField[ny][nx] > cd + distInc) {
+                    distanceField[ny][nx] = cd + distInc; queue.push({x: nx, y: ny});
+                }
+            }
+        }
+    }
+}
+
+function generateQuestion() {
+    let type = Math.floor(Math.random() * 8);
+    let q = ""; let options = []; let correct = 0;
+    switch(type) {
+        case 0:
+            let a1 = Math.floor(Math.random() * 60) + 30; let a2 = Math.floor(Math.random() * 60) + 20; correct = 180 - a1 - a2;
+            q = `Cho tam giác ABC có góc A = ${a1}°, góc B = ${a2}°. Tính số đo góc C?`; break;
+        case 1: 
+            let topA = (Math.floor(Math.random() * 60) + 10) * 2; correct = (180 - topA) / 2;
+            q = `Tam giác ABC cân tại A, có đỉnh A = ${topA}°. Tính góc ở đáy B?`; break;
+        case 2:
+            let baseA = Math.floor(Math.random() * 60) + 15; correct = 180 - (baseA * 2);
+            q = `Tam giác ABC cân tại A, có góc ở đáy B = ${baseA}°. Tính góc đỉnh A?`; break;
+        case 3:
+            let s1 = Math.floor(Math.random() * 5) + 3; let s2 = Math.floor(Math.random() * 5) + 3;
+            let minS = Math.abs(s1 - s2) + 1; let maxS = s1 + s2 - 1;
+            correct = Math.floor(Math.random() * (maxS - minS + 1)) + minS; 
+            q = `Tam giác có hai cạnh là ${s1}cm và ${s2}cm. Cạnh thứ ba CÓ THỂ là?`;
+            options = [correct, s1+s2, s1+s2+2, Math.abs(s1-s2)]; break;
+        case 4: 
+            let len = (Math.floor(Math.random() * 5) + 2) * 3; correct = (len / 3) * 2;
+            q = `Tam giác ABC, AM là trung tuyến dài ${len}cm. G là trọng tâm. Độ dài AG?`; break;
+        case 5:
+            let theoryTypes = [
+                {t: "ba đường cao", a: "Trực tâm"}, {t: "ba đường trung tuyến", a: "Trọng tâm"},
+                {t: "ba đường phân giác", a: "Cách đều 3 cạnh"}, {t: "ba đường trung trực", a: "Cách đều 3 đỉnh"}
+            ];
+            let th = theoryTypes[Math.floor(Math.random()*theoryTypes.length)]; correct = th.a;
+            q = `Giao điểm của ${th.t} trong tam giác được gọi là / có tính chất?`;
+            options = ["Trực tâm", "Trọng tâm", "Cách đều 3 cạnh", "Cách đều 3 đỉnh"]; break;
+        case 6: 
+            correct = "Đường vuông góc ngắn hơn"; q = `Kẻ đường vuông góc AH và đường xiên AM đến đường thẳng d. Chọn câu ĐÚNG?`;
+            options = [correct, "Đường vuông góc dài hơn", "Hai đường bằng nhau", "Không thể so sánh"]; break;
+        case 7: 
+            let v1 = Math.floor(Math.random() * 40) + 10; correct = 90 - v1;
+            q = `Tam giác ABC vuông tại A, có góc B = ${v1}°. Tính số đo góc C?`; break;
+    }
+
+    if (options.length === 0) {
+        let ans = new Set([correct]);
+        while(ans.size < 4) {
+            let offset = Math.floor(Math.random() * 20) - 10; if(offset === 0) offset = 5;
+            if(correct + offset > 0 && typeof correct === 'number') ans.add(correct + offset);
+            else if(typeof correct === 'number') ans.add(correct + Math.abs(offset) + 5);
+        }
+        options = Array.from(ans);
+    }
+    options.sort(() => Math.random() - 0.5);
+    return { question: q, options: options, answer: correct };
+}
+
+function openQuiz(genId) {
+    gameState = 'QUIZ'; currentGen = generators.find(g => g.id === genId);
+    keys.w = keys.a = keys.s = keys.d = keys.e = false; 
+    joyActive = false; 
+    document.getElementById('joystickStick').style.transform = `translate(0px, 0px)`;
+
+    let qData = generateQuestion();
+    document.getElementById("questionText").innerText = qData.question;
+    let optsDiv = document.getElementById("optionsContainer"); optsDiv.innerHTML = "";
+    
+    qData.options.forEach(opt => {
+        let btn = document.createElement("button"); btn.className = "option-btn";
+        btn.innerText = opt + (typeof opt === 'number' && qData.question.includes('độ') ? '°' : '');
+        if(typeof opt === 'number' && qData.question.includes('cm')) btn.innerText = opt + 'cm';
+        
+        // Sửa lỗi dính click trên mobile
+        btn.onclick = (e) => {
+            e.preventDefault();
+            if (opt === qData.answer) {
+                currentGen.fixed = true; player.fixedCount++;
+                document.getElementById("genCount").innerText = player.fixedCount;
+                if(player.fixedCount === WIN_CONDITION) spawnExitDoor();
+                closeQuiz();
+            } else {
+                closeQuiz(); player.stunUntil = Date.now() + Math.floor(Math.random() * 4000) + 1000; 
+            }
+        };
+        optsDiv.appendChild(btn);
+    });
+    document.getElementById("quizScreen").style.display = "flex";
+}
+function closeQuiz() { document.getElementById("quizScreen").style.display = "none"; gameState = 'PLAYING'; currentGen = null; }
+
+function spawnExitDoor() {
+    let validRooms = rooms.filter(r => Math.hypot((r.x + r.w/2)*TILE_SIZE - player.x, (r.y + r.h/2)*TILE_SIZE - player.y) > 30 * TILE_SIZE);
+    let r = validRooms.length > 0 ? validRooms[Math.floor(Math.random() * validRooms.length)] : rooms[0];
+    exitDoor = { x: (r.x + r.w/2)*TILE_SIZE, y: (r.y + r.h/2)*TILE_SIZE };
+}
+
+/**
+ * ==========================================
+ * 5. CẬP NHẬT ĐỐI TƯỢNG VÀ VẬT LÝ GAME
+ * ==========================================
+ */
+let lastTime = 0; let dfTimer = 0;
+
+function update(dt) {
+    if (gameState !== 'PLAYING') return;
+    let now = Date.now(); let isStunned = now < player.stunUntil;
+
+    if (!isStunned) {
+        player.vx = 0; player.vy = 0;
+        if(keys.w) player.vy = -1; if(keys.s) player.vy = 1;
+        if(keys.a) player.vx = -1; if(keys.d) player.vx = 1;
+        
+        if(player.vx !== 0 && player.vy !== 0) {
+            let len = Math.sqrt(player.vx*player.vx + player.vy*player.vy);
+            player.vx /= len; player.vy /= len;
+        }
+
+        if (joyActive) { player.vx = mobileVx; player.vy = mobileVy; }
+        if (player.vx !== 0 || player.vy !== 0) player.angle = Math.atan2(player.vy, player.vx);
+
+        let newPx = player.x + player.vx * player.speed * dt;
+        let newPy = player.y + player.vy * player.speed * dt;
+        
+        if (!checkWallCollision(newPx, player.y, player.radius)) player.x = newPx;
+        if (!checkWallCollision(player.x, newPy, player.radius)) player.y = newPy;
+    }
+
+    if (!isStunned && keys.e) {
+        for(let g of generators) {
+            if(!g.fixed && Math.hypot(g.x - player.x, g.y - player.y) < 70) { openQuiz(g.id); break; }
+        }
+    }
+
+    // --- Quái vật di chuyển ---
+    dfTimer += dt; if (dfTimer > 0.3) { updateDistanceField(); dfTimer = 0; }
+    let mxTile = Math.floor(monster.x / TILE_SIZE); let myTile = Math.floor(monster.y / TILE_SIZE);
+    let bestX = mxTile, bestY = myTile; let minD = 999999;
+    
+    if (mxTile >= 0 && mxTile < GRID_SIZE && myTile >= 0 && myTile < GRID_SIZE) {
+        let dVec = [ {x:0,y:-1}, {x:1,y:0}, {x:0,y:1}, {x:-1,y:0}, {x:1,y:-1}, {x:1,y:1}, {x:-1,y:1}, {x:-1,y:-1} ];
+        for(let d of dVec) {
+            let nx = mxTile + d.x; let ny = myTile + d.y;
+            if(nx>=0 && nx<GRID_SIZE && ny>=0 && ny<GRID_SIZE && distanceField[ny][nx] < minD) { 
+                minD = distanceField[ny][nx]; bestX = nx; bestY = ny; 
+            }
+        }
+    }
+    let targetMx = bestX * TILE_SIZE + TILE_SIZE/2; let targetMy = bestY * TILE_SIZE + TILE_SIZE/2;
+    let distToP = Math.hypot(player.x - monster.x, player.y - monster.y);
+    if(distToP < TILE_SIZE * 1.5) { targetMx = player.x; targetMy = player.y; }
+
+    let mAngle = Math.atan2(targetMy - monster.y, targetMx - monster.x);
+    let newMx = monster.x + Math.cos(mAngle) * monster.speed * dt;
+    let newMy = monster.y + Math.sin(mAngle) * monster.speed * dt;
+    
+    if (!checkWallCollision(newMx, monster.y, 15)) monster.x = newMx;
+    if (!checkWallCollision(monster.x, newMy, 15)) monster.y = newMy;
+
+    if (now - monster.lastShootTime > 1000 && distToP < TILE_SIZE * 7) { 
+        let shootAngle = Math.atan2(player.y - monster.y, player.x - monster.x);
+        bullets.push({ x: monster.x, y: monster.y, radius: 4, vx: Math.cos(shootAngle) * (player.speed * 2), vy: Math.sin(shootAngle) * (player.speed * 2) });
+        monster.lastShootTime = now;
+    }
+
+    // --- Đạn bay ---
+    for (let i = bullets.length - 1; i >= 0; i--) {
+        let b = bullets[i]; b.x += b.vx * dt; b.y += b.vy * dt;
+        if (checkWallCollision(b.x, b.y, b.radius)) { bullets.splice(i, 1); continue; }
+        if (Math.hypot(b.x - player.x, b.y - player.y) < player.radius + b.radius) { 
+            bullets.splice(i, 1); player.hp--; document.getElementById("hpCount").innerText = player.hp;
+            let dmgDiv = document.getElementById("damageOverlay");
+            dmgDiv.style.opacity = "0.5"; setTimeout(() => dmgDiv.style.opacity = "0", 150);
+            if (player.hp <= 0) endGame(false);
+        }
+    }
+
+    if (exitDoor && Math.hypot(player.x - exitDoor.x, player.y - exitDoor.y) < TILE_SIZE) endGame(true);
+}
+
+function checkWallCollision(x, y, r) {
+    let checkPts = [ {px: x-r, py: y-r}, {px: x+r, py: y-r}, {px: x-r, py: y+r}, {px: x+r, py: y+r} ];
+    for (let pt of checkPts) {
+        let tx = Math.floor(pt.px / TILE_SIZE); let ty = Math.floor(pt.py / TILE_SIZE);
+        if (tx < 0 || tx >= GRID_SIZE || ty < 0 || ty >= GRID_SIZE || map[ty][tx] === WALL) return true;
+    }
+    return false;
+}
+
+/**
+ * ==========================================
+ * 6. HIỂN THỊ ĐỒ HỌA (RENDER)
+ * ==========================================
+ */
+function draw() {
+    if (gameState !== 'PLAYING') return;
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = COLOR_WALL; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    ctx.translate(canvas.width/2 - player.x, canvas.height/2 - player.y); 
+
+    let startC = Math.max(0, Math.floor((player.x - canvas.width/2)/TILE_SIZE));
+    let endC = Math.min(GRID_SIZE, Math.floor((player.x + canvas.width/2)/TILE_SIZE) + 1);
+    let startR = Math.max(0, Math.floor((player.y - canvas.height/2)/TILE_SIZE));
+    let endR = Math.min(GRID_SIZE, Math.floor((player.y + canvas.height/2)/TILE_SIZE) + 1);
+
+    for (let y = startR; y < endR; y++) {
+        for (let x = startC; x < endC; x++) {
+            if (map[y][x] === CORRIDOR) {
+                ctx.fillStyle = COLOR_CORRIDOR; ctx.fillRect(x*TILE_SIZE, y*TILE_SIZE, TILE_SIZE+1, TILE_SIZE+1);
+            } else if (map[y][x] === ROOM) {
+                ctx.fillStyle = COLOR_ROOM; ctx.fillRect(x*TILE_SIZE, y*TILE_SIZE, TILE_SIZE+1, TILE_SIZE+1);
+            }
+        }
+    }
+
+    let isStunned = Date.now() < player.stunUntil;
+    ctx.font = "bold 15px Arial"; ctx.textAlign = "center";
+    
+    generators.forEach(g => {
+        if(Math.abs(g.x - player.x) < canvas.width && Math.abs(g.y - player.y) < canvas.height) {
+            ctx.save(); ctx.translate(g.x, g.y); ctx.rotate(g.rot);
+            ctx.fillStyle = g.fixed ? COLOR_GEN_FIXED : COLOR_GEN_NORMAL;
+            ctx.beginPath(); ctx.moveTo(-15, -15); ctx.lineTo(15, -15); ctx.lineTo(25, 20); ctx.lineTo(-25, 20);
+            ctx.closePath(); ctx.fill(); ctx.lineWidth = 2; ctx.stroke(); ctx.restore();
+
+            if(!g.fixed && !isStunned && Math.hypot(g.x - player.x, g.y - player.y) < 70) {
+                ctx.fillStyle = "white"; ctx.fillText("[E] Sửa", g.x, g.y - 30);
+            }
+        }
+    });
+
+    if (exitDoor) {
+        ctx.fillStyle = "#FFD700"; ctx.fillRect(exitDoor.x - 20, exitDoor.y - 20, 40, 40);
+        ctx.fillStyle = "black"; ctx.fillText("EXIT", exitDoor.x, exitDoor.y + 5);
+    }
+
+    ctx.fillStyle = COLOR_BULLET;
+    for(let b of bullets) { ctx.beginPath(); ctx.arc(b.x, b.y, b.radius, 0, Math.PI*2); ctx.fill(); }
+
+    ctx.fillStyle = COLOR_MONSTER; ctx.fillRect(monster.x - 15, monster.y - 15, 30, 30);
+    let eyeAngle = Math.atan2(player.y - monster.y, player.x - monster.x);
+    let ex = Math.cos(eyeAngle) * 5; let ey = Math.sin(eyeAngle) * 5;
+    ctx.fillStyle = "black";
+    ctx.beginPath(); ctx.arc(monster.x - 6 + ex, monster.y - 5 + ey, 3.5, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(monster.x + 6 + ex, monster.y - 5 + ey, 3.5, 0, Math.PI*2); ctx.fill();
+
+    ctx.save(); ctx.translate(player.x, player.y); ctx.rotate(player.angle);
+    ctx.fillStyle = isStunned ? COLOR_PLAYER_STUN : COLOR_PLAYER;
+    ctx.beginPath(); ctx.moveTo(player.radius, 0); ctx.lineTo(-player.radius, -player.radius*0.8); ctx.lineTo(-player.radius, player.radius*0.8);
+    ctx.closePath(); ctx.fill(); ctx.lineWidth = 1.5; ctx.stroke(); ctx.restore();
+    
+    if(isStunned) {
+        ctx.fillStyle = "red"; ctx.font = "bold 16px Arial";
+        ctx.fillText("CHOÁNG " + Math.ceil((player.stunUntil - Date.now())/1000) + "s", player.x, player.y - 25);
+    }
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    
+    if (exitDoor) {
+        let dx = exitDoor.x - player.x; let dy = exitDoor.y - player.y;
+        let arrowAngle = Math.atan2(dy, dx);
+        let arrowX = canvas.width/2 + Math.cos(arrowAngle) * 100;
+        let arrowY = canvas.height/2 + Math.sin(arrowAngle) * 100;
+        
+        ctx.save(); ctx.translate(arrowX, arrowY); ctx.rotate(arrowAngle);
+        ctx.fillStyle = "#00FFFF";
+        ctx.beginPath(); ctx.moveTo(15, 0); ctx.lineTo(-10, -10); ctx.lineTo(-5, 0); ctx.lineTo(-10, 10);
+        ctx.closePath(); ctx.fill(); ctx.strokeStyle = "white"; ctx.stroke(); ctx.restore();
+        
+        ctx.fillStyle = "#00FFFF"; ctx.font = "bold 14px Arial"; ctx.textAlign = "center";
+        ctx.fillText(Math.floor(Math.hypot(dx, dy)/TILE_SIZE) + "m", arrowX, arrowY + 28);
+    }
+}
+
+/**
+ * ==========================================
+ * 7. CORE LOOP ENGINE
+ * ==========================================
+ */
+function gameLoop(timestamp) {
+    if (!lastTime) lastTime = timestamp;
+    let dt = (timestamp - lastTime) / 1000; lastTime = timestamp;
+    if (dt > 0.1) dt = 0.1; 
+
+    if (gameState === 'PLAYING') {
+        update(dt); draw();
+        let elapsed = Math.floor((Date.now() - startTime) / 1000);
+        document.getElementById("timerDisplay").innerText = `Thời gian: ${String(Math.floor(elapsed/60)).padStart(2, '0')}:${String(elapsed%60).padStart(2, '0')}`;
+    }
+    requestAnimationFrame(gameLoop);
+}
+
+// Bổ sung chốt an toàn chống Click 2 lần
+function startGame() {
+    if (gameState === 'PLAYING') return; 
+    document.getElementById("startScreen").style.display = "none";
+    generateMap(); updateDistanceField(); 
+    gameState = 'PLAYING'; startTime = Date.now();
+    requestAnimationFrame(gameLoop);
+}
+
+function endGame(win) {
+    gameState = win ? 'WIN' : 'LOSE'; endTime = Date.now();
+    let elapsed = Math.floor((endTime - startTime) / 1000);
+    let timeStr = `${String(Math.floor(elapsed/60)).padStart(2, '0')}:${String(elapsed%60).padStart(2, '0')}`;
+
+    document.getElementById("endScreen").style.display = "flex";
+    document.getElementById("endTitle").innerText = win ? "CHIẾN THẮNG!" : "BẠN ĐÃ CHẾT";
+    document.getElementById("endTitle").style.color = win ? "#4CAF50" : "#F44336";
+    document.getElementById("endMessage").innerHTML = win 
+        ? `Trốn thoát thành công!<br>Thời gian của bạn: <b>${timeStr}</b>` 
+        : `Quái vật đã hạ gục bạn.<br>Thời gian sinh tồn: <b>${timeStr}</b><br>Máy đã sửa: <b>${player.fixedCount}/${WIN_CONDITION}</b>`;
+}
+</script>
+</body>
+</html>
