@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Escape The Geometry Maze - Hybrid Edition</title>
+    <title>Escape The Geometry Maze DUCJIEN AURA 67</title>
     <style>
         /* Khóa thao tác cuộn, phóng to trên điện thoại */
         body, html {
@@ -75,7 +75,7 @@
         /* --- BỘ ĐIỀU KHIỂN MOBILE (ẨN MẶC ĐỊNH) --- */
         #mobileControls {
             position: absolute; bottom: 0; left: 0; width: 100%; height: 40%;
-            pointer-events: none; display: none; /* Sẽ được bật bằng JavaScript khi có chạm */
+            pointer-events: none; display: none; /* JS sẽ kiểm soát ẩn/hiện */
             justify-content: space-between; align-items: flex-end; 
             padding: 30px; box-sizing: border-box; z-index: 50;
         }
@@ -131,7 +131,7 @@
                 - <b>Kiến thức:</b> Toán Hình học lớp 7. Trả lời SAI bị <b>choáng ngẫu nhiên 1-5 giây</b>.<br>
                 - <b>Mục tiêu:</b> Sửa <b>10/30</b> máy, cửa thoát hiểm màu vàng sẽ mở ra.<br>
                 - <b>Nguy hiểm:</b> Quái vật bắn đạn sát thương cực rát. Trúng 5 viên = CHẾT.<br>
-                - <b>Điều khiển (Tự Động Nhận Diện):</b> Dùng phím WASD hoặc thao tác chạm vuốt trên màn hình để di chuyển.
+                - <b>Điều khiển Thông Minh:</b> Chạm màn hình để gọi Joystick. Gõ phím WASD để tự động chuyển về giao diện PC.
             </p>
             <button class="start-btn" onclick="startGame()">BẮT ĐẦU CHƠI</button>
         </div>
@@ -180,11 +180,14 @@ let monster = { x: 0, y: 0, speed: 120, lastShootTime: 0 };
 let bullets = []; let keys = { w:false, a:false, s:false, d:false, e:false };
 let currentGen = null; let gameState = 'START'; let startTime = 0; let endTime = 0;
 
-// Trạng thái Joystick
+// Trạng thái Giao diện & Joystick
+let mobileUIVisible = false;
 let joyActive = false;
 let mobileVx = 0; let mobileVy = 0;
 
-const canvas = document.getElementById("gameCanvas"); const ctx = canvas.getContext("2d");
+const canvas = document.getElementById("gameCanvas"); 
+const ctx = canvas.getContext("2d");
+const mobileUI = document.getElementById('mobileControls');
 
 window.addEventListener("resize", () => {
     canvas.width = window.innerWidth; canvas.height = window.innerHeight;
@@ -193,21 +196,38 @@ window.dispatchEvent(new Event('resize'));
 
 /**
  * ==========================================
- * 2. HỆ THỐNG ĐIỀU KHIỂN LAI (HYBRID CONTROLS)
+ * 2. HỆ THỐNG CHUYỂN ĐỔI ĐIỀU KHIỂN LAI (AUTO-SWITCH)
  * ==========================================
  */
-// 2.1. Lắng nghe Keyboard (Luôn luôn hoạt động)
-window.addEventListener("keydown", e => { if(keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = true; });
-window.addEventListener("keyup", e => { if(keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = false; });
+// 2.1. Bàn phím (Chuyển sang PC Mode khi gõ)
+window.addEventListener("keydown", e => { 
+    let k = e.key.toLowerCase();
+    if(keys.hasOwnProperty(k)) {
+        keys[k] = true;
+        // Ẩn cụm phím ảo nếu phát hiện gõ phím di chuyển / hành động
+        if (['w', 'a', 's', 'd', 'e'].includes(k) && mobileUIVisible) {
+            mobileUI.style.display = 'none';
+            mobileUIVisible = false;
+            joyActive = false;
+            mobileVx = 0; mobileVy = 0;
+            document.getElementById('joystickStick').style.transform = `translate(0px, 0px)`;
+        }
+    }
+});
+window.addEventListener("keyup", e => { 
+    let k = e.key.toLowerCase();
+    if(keys.hasOwnProperty(k)) keys[k] = false; 
+});
 
-// 2.2. Nhận diện Touch thông minh (Bật Mobile Controls)
-window.addEventListener('touchstart', function enableMobileUI() {
-    document.getElementById('mobileControls').style.display = 'flex';
-    // Hủy lắng nghe lập tức sau lần chạm đầu tiên để giải phóng tài nguyên
-    window.removeEventListener('touchstart', enableMobileUI); 
-}, { once: true, passive: true });
+// 2.2. Chạm màn hình (Chuyển sang Mobile Mode khi vuốt/chạm)
+window.addEventListener('touchstart', () => {
+    if (!mobileUIVisible) {
+        mobileUI.style.display = 'flex';
+        mobileUIVisible = true;
+    }
+}, { passive: true });
 
-// 2.3. Logic của Joystick & Nút Bấm
+// 2.3. Logic chi tiết của Joystick & Nút Bấm Ảo
 const joyBase = document.getElementById('joystickBase');
 const joyStick = document.getElementById('joystickStick');
 const actionBtn = document.getElementById('actionBtn');
@@ -228,7 +248,7 @@ function handleTouch(e) {
     if (dist > maxDist) { dx = (dx / dist) * maxDist; dy = (dy / dist) * maxDist; }
     joyStick.style.transform = `translate(${dx}px, ${dy}px)`;
     
-    // Normalize vector
+    // Chuẩn hóa Vector
     let norm = Math.hypot(dx, dy);
     if(norm > 0) { mobileVx = dx / norm; mobileVy = dy / norm; } 
     else { mobileVx = 0; mobileVy = 0; }
@@ -246,14 +266,14 @@ joyBase.addEventListener('touchmove', handleTouch, {passive: false});
 joyBase.addEventListener('touchend', resetTouch);
 joyBase.addEventListener('touchcancel', resetTouch);
 
-// Liên kết Nút Sửa trên màn hình với phím 'E'
+// Liên kết Nút Sửa
 actionBtn.addEventListener('touchstart', e => { e.preventDefault(); keys.e = true; }, {passive: false});
 actionBtn.addEventListener('touchend', e => { e.preventDefault(); keys.e = false; });
 actionBtn.addEventListener('touchcancel', e => { e.preventDefault(); keys.e = false; });
 
 /**
  * ==========================================
- * 3. HỆ THỐNG MAP VÀ A*
+ * 3. HỆ THỐNG MAP VÀ A* (PHONG CÁCH AMONG US)
  * ==========================================
  */
 function generateMap() {
@@ -444,7 +464,8 @@ function generateQuestion() {
 function openQuiz(genId) {
     gameState = 'QUIZ'; currentGen = generators.find(g => g.id === genId);
     keys.w = keys.a = keys.s = keys.d = keys.e = false; 
-    joyActive = false; // Reset joystick trạng thái chạm an toàn
+    joyActive = false; // Reset joystick an toàn
+    document.getElementById('joystickStick').style.transform = `translate(0px, 0px)`;
 
     let qData = generateQuestion();
     document.getElementById("questionText").innerText = qData.question;
